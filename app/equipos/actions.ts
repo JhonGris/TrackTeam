@@ -178,8 +178,9 @@ export async function createEquipo(
     }
   }
 
-  // Revalidate and redirect
+  // Revalidate dependent views so new equipment shows up elsewhere (e.g. calendario)
   revalidatePath('/equipos')
+  revalidatePath('/calendario')
   redirect('/equipos')
 }
 
@@ -309,8 +310,9 @@ export async function updateEquipo(
     }
   }
 
-  // Revalidate the page - don't redirect, let the component handle closing
+  // Revalidate dependent views - don't redirect, let the component handle closing
   revalidatePath('/equipos')
+  revalidatePath('/calendario')
   
   return {
     success: true,
@@ -345,6 +347,7 @@ export async function deleteEquipo(id: string): Promise<{ success: boolean; erro
     })
 
     revalidatePath('/equipos')
+    revalidatePath('/calendario')
     
     // Informar cuántos servicios fueron eliminados también
     if (equipo._count.servicios > 0) {
@@ -380,6 +383,7 @@ export async function assignEquipoToColaborador(
     })
 
     revalidatePath('/equipos')
+    revalidatePath('/calendario')
     return { success: true }
   } catch (error) {
     // Handle not found

@@ -23,8 +23,17 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarButtons } from './calendar-buttons'
-import { CheckCircle2 } from 'lucide-react'
+import { Check, CheckCircle2, ChevronsUpDown } from 'lucide-react'
 
 type EquipoSelect = {
   id: string
@@ -89,6 +98,7 @@ export function NuevoMantenimientoDialog({
   const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [createdMantenimiento, setCreatedMantenimiento] = useState<CreatedMantenimiento | null>(null)
+  const [equipoOpen, setEquipoOpen] = useState(false)
 
   // Form state
   const [equipoId, setEquipoId] = useState('')
@@ -103,6 +113,7 @@ export function NuevoMantenimientoDialog({
   const [frecuencia, setFrecuencia] = useState('')
   const [diasIntervalo, setDiasIntervalo] = useState('')
   const [fechaFinRecurrencia, setFechaFinRecurrencia] = useState('')
+  const selectedEquipo = equipoId ? equipos.find((e) => e.id === equipoId) : null
 
   const resetForm = () => {
     setEquipoId('')
@@ -118,12 +129,19 @@ export function NuevoMantenimientoDialog({
     setError(null)
     setShowSuccess(false)
     setCreatedMantenimiento(null)
+    setEquipoOpen(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+
+    if (!equipoId) {
+      setError('Selecciona un equipo para programar el mantenimiento')
+      setIsLoading(false)
+      return
+    }
 
     const formData = new FormData()
     formData.append('equipoId', equipoId)
@@ -277,19 +295,70 @@ export function NuevoMantenimientoDialog({
           {/* Equipo */}
           <div className="space-y-2">
             <Label htmlFor="equipoId">Equipo *</Label>
-            <Select value={equipoId} onValueChange={setEquipoId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar equipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {equipos.map((equipo) => (
-                  <SelectItem key={equipo.id} value={equipo.id}>
-                    {equipo.marca} {equipo.modelo} - {equipo.serial}
-                    {equipo.colaborador && ` (${equipo.colaborador.nombre} ${equipo.colaborador.apellido})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={equipoOpen} onOpenChange={setEquipoOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="equipoId"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={equipoOpen}
+                  className="w-full justify-between"
+                  type="button"
+                >
+                  {selectedEquipo ? (
+                    <span className="truncate text-left">
+                      {selectedEquipo.marca} {selectedEquipo.modelo} - {selectedEquipo.serial}
+                      {selectedEquipo.colaborador &&
+                        ` (${selectedEquipo.colaborador.nombre} ${selectedEquipo.colaborador.apellido})`}
+                    </span>
+                  ) : (
+                    'Seleccionar equipo'
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[280px] p-0">
+                <Command loop>
+                  <CommandInput placeholder="Buscar marca, modelo, serial o colaborador..." />
+                  <CommandEmpty>No se encontró equipo.</CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      {equipos.map((equipo) => {
+                        const colaboradorNombre = equipo.colaborador
+                          ? `${equipo.colaborador.nombre} ${equipo.colaborador.apellido}`
+                          : 'Sin asignar'
+
+                        return (
+                          <CommandItem
+                            key={equipo.id}
+                            value={equipo.id}
+                            keywords={[
+                              equipo.marca,
+                              equipo.modelo,
+                              equipo.serial,
+                              equipo.colaborador?.nombre ?? '',
+                              equipo.colaborador?.apellido ?? '',
+                            ]}
+                            onSelect={() => {
+                              setEquipoId(equipo.id)
+                              setEquipoOpen(false)
+                            }}
+                          >
+                            <div className="flex flex-col items-start text-left">
+                              <span className="text-sm font-medium">
+                                {equipo.marca} {equipo.modelo} - {equipo.serial}
+                              </span>
+                              <span className="text-xs text-muted-foreground">{colaboradorNombre}</span>
+                            </div>
+                            {equipoId === equipo.id && <Check className="ml-auto h-4 w-4" />}
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
