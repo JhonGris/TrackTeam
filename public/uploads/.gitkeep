@@ -1,0 +1,4 @@
+# This folder contains uploaded files
+# Ignore all files in this folder except this gitkeep
+*
+!.gitkeep

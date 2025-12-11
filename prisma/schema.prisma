@@ -1,0 +1,329 @@
+// TrackTeam Database Schema
+// IT Equipment Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Colaboradores (Usuarios del sistema)
+model Colaborador {
+  id           String   @id @default(cuid())
+  nombre       String
+  apellido     String
+  cargo        String
+  email        String   @unique
+  ciudad       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relación con equipos asignados
+  equipos Equipo[]
+  
+  // Relación con movimientos de inventario asignados
+  movimientosRepuestos MovimientoRepuesto[]
+
+  @@map("colaboradores")
+}
+
+// Modelo de Equipos (Computers/Laptops)
+model Equipo {
+  id                  String   @id @default(cuid())
+  serial              String   @unique
+  marca               String
+  modelo              String
+  tipo                String   // Desktop, Portátil
+  
+  // Especificaciones técnicas básicas
+  procesador          String
+  ram                 Int      // GB (total)
+  almacenamiento      String   // Ej: "512GB SSD"
+  gpu                 String   // Tarjeta de video
+  
+  // Especificaciones detalladas (JSON)
+  ramDetalle          String?  // JSON: [{ slot, capacidad, tipo, velocidad }]
+  discosDetalle       String?  // JSON: [{ tipo, capacidad, interfaz, salud }]
+  gpuDetalle          String?  // JSON: { modelo, memoria, tipo }
+  
+  // Campos heredados de proyecto anterior
+  almacenamientoTipo  String?  // SSD, HDD, NVMe
+  almacenamientoGb    Int?     // Capacidad en GB
+  tarjetaVideo        String?  // Descripción alternativa de GPU
+  
+  // Periféricos
+  pantallas           Int      @default(0)
+  resolucionPantalla  String?
+  tieneTeclado        Boolean  @default(false)
+  tieneMouse          Boolean  @default(false)
+  otrosPeriferico     String?
+  
+  // Estado y fechas
+  estadoSalud         String   @default("Bueno") // Bueno, Regular, Malo
+  estado              String   @default("Activo") // Activo, En Reparación, Descontinuado, En Garantía
+  fechaAdquisicion    DateTime
+  fechaGarantia       DateTime?
+  
+  // Asignación y ubicación
+  colaboradorId       String?
+  colaborador         Colaborador? @relation(fields: [colaboradorId], references: [id])
+  departamento        String?
+  ubicacion           String?
+  
+  // Observaciones
+  observaciones       String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relación con servicios técnicos
+  servicios ServicioTecnico[]
+  
+  // Relación con mantenimientos programados
+  mantenimientosProgramados MantenimientoProgramado[]
+  
+  // Archivos adjuntos
+  archivos Archivo[]
+
+  @@map("equipos")
+}
+
+// Modelo de Servicios Técnicos (Mantenimientos)
+model ServicioTecnico {
+  id                 String   @id @default(cuid())
+  tipo               String   // Preventivo, Correctivo, Limpieza, Actualización de Software
+  fechaServicio      DateTime
+  problemas          String
+  soluciones         String
+  tiempoInvertido    Int      // Minutos
+  estadoResultante   String   // Bueno, Regular, Malo
+  
+  // Diagnóstico IA (JSON con métricas y análisis)
+  diagnosticoIA      String?  // JSON: { metricas, diagnostico, archivosAnalizados }
+  
+  // Relación con equipo
+  equipoId           String
+  equipo             Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  
+  // Relación con mantenimiento programado (si fue programado)
+  mantenimientoProgramado MantenimientoProgramado?
+  
+  // Archivos adjuntos
+  archivos           Archivo[]
+  
+  // Repuestos utilizados
+  repuestosUsados    UsoRepuesto[]
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("servicios_tecnicos")
+}
+
+// Modelo de Archivos Adjuntos
+model Archivo {
+  id                 String   @id @default(cuid())
+  nombre             String   // Nombre original del archivo
+  nombreAlmacenado   String   // Nombre único en el servidor
+  tipo               String   // MIME type (image/jpeg, application/pdf, etc.)
+  tamanio            Int      // Tamaño en bytes
+  ruta               String   // Ruta relativa al archivo
+  
+  // Tipo de entidad relacionada
+  tipoEntidad        String   // "equipo" | "servicio"
+  
+  // Relaciones polimórficas (solo una será usada)
+  equipoId           String?
+  equipo             Equipo?   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  
+  servicioTecnicoId  String?
+  servicioTecnico    ServicioTecnico? @relation(fields: [servicioTecnicoId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  descripcion        String?
+  esImagen           Boolean  @default(false)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("archivos")
+}
+
+// Modelo de Mantenimientos Programados
+model MantenimientoProgramado {
+  id                 String   @id @default(cuid())
+  
+  // Tipo de mantenimiento
+  tipo               String   // Preventivo, Correctivo, Limpieza, Actualización de Software
+  descripcion        String?  // Descripción opcional del mantenimiento
+  
+  // Programación
+  fechaProgramada    DateTime
+  horaEstimada       String?  // HH:mm formato
+  duracionEstimada   Int?     // Minutos estimados
+  
+  // Recurrencia
+  esRecurrente       Boolean  @default(false)
+  frecuencia         String?  // mensual, trimestral, semestral, anual, personalizado
+  diasIntervalo      Int?     // Para frecuencia personalizada
+  fechaFinRecurrencia DateTime? // Fecha límite de recurrencia
+  
+  // Estado
+  estado             String   @default("Pendiente") // Pendiente, Completado, Cancelado, Vencido
+  fechaCompletado    DateTime?
+  
+  // Relación con equipo
+  equipoId           String
+  equipo             Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  
+  // Relación con servicio técnico (cuando se completa)
+  servicioTecnicoId  String?  @unique
+  servicioTecnico    ServicioTecnico? @relation(fields: [servicioTecnicoId], references: [id])
+  
+  // Notificaciones enviadas
+  notificacion7dias  Boolean  @default(false)
+  notificacion3dias  Boolean  @default(false)
+  notificacion1dia   Boolean  @default(false)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("mantenimientos_programados")
+}
+
+// Modelo de Categorías de Repuestos
+model CategoriaRepuesto {
+  id          String     @id @default(cuid())
+  nombre      String     @unique
+  descripcion String?
+  color       String     @default("#6366f1") // Color para identificar en UI
+  
+  // Relación con repuestos
+  repuestos   Repuesto[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("categorias_repuestos")
+}
+
+// Modelo de Repuestos (Inventario)
+model Repuesto {
+  id               String   @id @default(cuid())
+  numero           Int      @unique // Número consecutivo 000, 001, 002...
+  nombre           String
+  descripcion      String?
+  
+  // Fotografía del objeto
+  fotoUrl          String?  // URL/ruta de la foto del repuesto
+  
+  // Categoría
+  categoriaId      String?
+  categoria        CategoriaRepuesto? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  
+  // Stock
+  cantidad         Int      @default(0)
+  cantidadMinima   Int      @default(1) // Alerta de stock bajo
+  unidad           String   @default("unidad") // unidad, pieza, metro, etc.
+  
+  // Información adicional
+  ubicacion        String?  // Ubicación física en almacén
+  proveedor        String?
+  asignadoA        String?  // Persona o área asignada
+  codigoInterno    String?  @unique // Código interno del repuesto
+  
+  // Estado
+  activo           Boolean  @default(true)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relación con movimientos de inventario
+  movimientos      MovimientoRepuesto[]
+  
+  // Relación con servicios técnicos
+  usosEnServicios  UsoRepuesto[]
+
+  @@map("repuestos")
+}
+
+// Modelo de Movimientos de Inventario
+model MovimientoRepuesto {
+  id            String   @id @default(cuid())
+  
+  // Repuesto
+  repuestoId    String
+  repuesto      Repuesto @relation(fields: [repuestoId], references: [id], onDelete: Cascade)
+  
+  // Tipo y cantidad
+  tipo          String   // entrada, salida, ajuste
+  cantidad      Int      // Positivo para entrada, negativo para salida
+  cantidadAnterior Int   // Stock antes del movimiento
+  cantidadNueva Int      // Stock después del movimiento
+  
+  // Detalles
+  motivo        String?  // Razón del movimiento
+  referencia    String?  // Número de factura, orden, etc.
+  
+  // Asignación a colaborador (opcional)
+  colaboradorId String?
+  colaborador   Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
+  
+  // Notificación por correo
+  notificacionEnviada Boolean @default(false)
+  
+  // Foto del movimiento (para documentar estado del objeto)
+  fotoUrl       String?
+  
+  createdAt     DateTime @default(now())
+
+  @@map("movimientos_repuestos")
+}
+
+// Modelo de Uso de Repuestos en Servicios
+model UsoRepuesto {
+  id                String          @id @default(cuid())
+  
+  // Repuesto
+  repuestoId        String
+  repuesto          Repuesto        @relation(fields: [repuestoId], references: [id], onDelete: Cascade)
+  
+  // Servicio técnico
+  servicioTecnicoId String
+  servicioTecnico   ServicioTecnico @relation(fields: [servicioTecnicoId], references: [id], onDelete: Cascade)
+  
+  // Cantidad usada
+  cantidad          Int
+  notas             String?
+  
+  createdAt         DateTime        @default(now())
+
+  @@map("usos_repuestos")
+}
+
+// Modelo de Plantillas de Mantenimiento
+model PlantillaMantenimiento {
+  id                 String   @id @default(cuid())
+  nombre             String   // Nombre de la plantilla
+  descripcion        String?  // Descripción breve
+  tipo               String   // Preventivo, Correctivo, Limpieza, Actualización de Software
+  
+  // Contenido pre-llenado
+  problemasTipicos   String   // Texto para el campo "problemas"
+  solucionesTipicas  String   // Texto para el campo "soluciones"
+  tiempoEstimado     Int      // Minutos estimados
+  
+  // Checklist de tareas (JSON array de strings)
+  checklist          String?  // ["Tarea 1", "Tarea 2", ...]
+  
+  // Estado
+  activa             Boolean  @default(true)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("plantillas_mantenimiento")
+}

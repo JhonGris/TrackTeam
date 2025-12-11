@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Usuarios
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  departamento String
+  ciudad       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relación con equipos asignados
+  equipos Equipo[]
+
+  @@map("usuarios")
+}
+
+// Modelo de Equipos
+model Equipo {
+  id                String   @id @default(cuid())
+  serial            String   @unique
+  marca             String
+  modelo            String
+  tipo              String   // PC Escritorio, Portátil, etc.
+  fechaAdquisicion  DateTime?
+  fechaGarantia     DateTime?
+  estado            String   @default("Activo") // Activo, En Reparación, Descontinuado, En Garantía
+  
+  // Especificaciones técnicas
+  procesador        String?
+  ram               Int?     // GB (total para compatibilidad)
+  ramDetalle        String?  // JSON con detalles de módulos RAM
+  almacenamientoTipo String? // SSD, HDD
+  almacenamientoGb  Int?
+  discosDetalle     String?  // JSON con detalles de discos
+  tarjetaVideo      String?
+  gpuDetalle        String?  // JSON con detalles de GPU
+  
+  // Asignación
+  usuarioId         String?
+  departamento      String?
+  ubicacion         String?
+  
+  // Periféricos
+  pantallas         Int      @default(0)
+  resolucionPantalla String?
+  tieneTeclado      Boolean  @default(false)
+  tieneMouse        Boolean  @default(false)
+  otrosPeriferico   String?
+  
+  // Observaciones
+  observaciones     String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  usuario           Usuario? @relation(fields: [usuarioId], references: [id])
+  imagenes          ImagenEquipo[]
+  servicios         ServicioTecnico[]
+
+  @@map("equipos")
+}
+
+// Modelo de Imágenes de Equipos
+model ImagenEquipo {
+  id        String @id @default(cuid())
+  equipoId  String
+  url       String
+  tipo      String // frontal, lateral, general
+  createdAt DateTime @default(now())
+
+  // Relación
+  equipo    Equipo @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  @@map("imagenes_equipos")
+}
+
+// Modelo de Servicios Técnicos
+model ServicioTecnico {
+  id                String   @id @default(cuid())
+  equipoId          String
+  tipoMantenimiento String   // Preventivo, Correctivo, Instalación/Upgrade
+  fechaServicio     DateTime
+  tecnicoResponsable String
+  diagnostico       String?
+  descripcionTrabajo String?
+  costoReparacion   Float?   @default(0)
+  
+  // Nuevo: Guardar usuario asignado en el momento del servicio
+  usuarioAsignado   String?  // Nombre del usuario que tenía el equipo
+  departamentoEnMomento String? // Departamento del usuario en ese momento
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relación
+  equipo            Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  @@map("servicios_tecnicos")
+}
+
+// Nuevo: Modelo de Historial de Asignaciones
+model HistorialAsignacion {
+  id            String   @id @default(cuid())
+  equipoId      String
+  equipoSerial  String   // Para referencia rápida
+  usuarioId     String?
+  usuarioNombre String   // Nombre del usuario asignado
+  departamento  String?  // Departamento en ese momento
+  ciudad        String?  // Ciudad en ese momento
+  fechaInicio   DateTime @default(now())
+  fechaFin      DateTime? // null si es la asignación actual
+  motivo        String   // "Asignación inicial", "Reasignación", "Devolución", "Reparación"
+  observaciones String?
+  creadoPor     String?  // Usuario del sistema que hizo el cambio
+  createdAt     DateTime @default(now())
+
+  @@map("historial_asignaciones")
+  @@index([equipoId])
+  @@index([usuarioId])
+}
