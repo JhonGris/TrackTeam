@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, Poppins, Fira_Code } from "next/font/google";
+import { Poppins, Fira_Code } from "next/font/google";
 import { MainNav } from "@/components/layout/main-nav";
 import "./globals.css";
 
-// Fuente principal para interfaz y cuerpo de texto
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-// Fuente para titulares y marca
+// Fuente principal (interfaz y titulares)
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -40,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${poppins.variable} ${firaCode.variable} antialiased min-h-screen bg-background`}
+        className={`${poppins.variable} ${firaCode.variable} antialiased min-h-screen bg-background`}
       >
         <MainNav />
         <main className="container mx-auto px-4 py-6 max-w-7xl">
