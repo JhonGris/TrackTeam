@@ -22,6 +22,23 @@ const firaCode = Fira_Code({
 export const metadata: Metadata = {
   title: "TrackTeam - Sistema de Gestión de Servicio Técnico",
   description: "Sistema de gestión de equipos de cómputo y servicio técnico",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      "max-snippet": 0,
+      "max-image-preview": "none",
+      "max-video-preview": 0,
+    },
+  },
+  icons: {
+    icon: ["/icon.svg", "/favicon.ico"],
+    apple: "/icon.svg",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
