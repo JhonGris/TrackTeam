@@ -23,9 +23,10 @@ const ServicioSchema = z.object({
   }, 'La fecha del servicio no puede ser futura'),
   problemas: z.string().min(1, 'Debe describir los problemas encontrados').trim(),
   soluciones: z.string().min(1, 'Debe describir las soluciones aplicadas').trim(),
-  tiempoInvertido: z.coerce.number({
-    invalid_type_error: 'Debe ingresar el tiempo invertido',
-  }).min(1, 'El tiempo debe ser al menos 1 minuto').int('El tiempo debe ser un número entero'),
+  tiempoInvertido: z.coerce
+    .number()
+    .min(1, 'Debe ingresar el tiempo invertido (mínimo 1 minuto)')
+    .int('El tiempo debe ser un número entero'),
   estadoResultante: z.enum(['Bueno', 'Regular', 'Malo'], {
     message: 'Estado resultante inválido',
   }),

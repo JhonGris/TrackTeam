@@ -7,10 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:data": "tsx scripts/migrate-data.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "migrate:data": "tsx scripts/migrate-data.ts",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-libsql": "^7.0.1",
