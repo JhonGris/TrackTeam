@@ -1,6 +1,5 @@
+import { put, del } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir, unlink } from 'fs/promises'
-import { existsSync } from 'fs'
 import path from 'path'
 import prisma from '@/lib/prisma'
 
@@ -9,7 +8,6 @@ import prisma from '@/lib/prisma'
 // ============================================================================
 
 // Configuration
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
   'image/jpeg',
@@ -38,31 +36,20 @@ function generateUniqueFilename(originalName: string): string {
 }
 
 /**
- * Ensure upload directory exists
- */
-async function ensureUploadDir(subdir: string): Promise<string> {
-  const dirPath = path.join(UPLOAD_DIR, subdir)
-  if (!existsSync(dirPath)) {
-    await mkdir(dirPath, { recursive: true })
-  }
-  return dirPath
-}
-
-/**
  * POST /api/upload - Upload a file
  */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const file = formData.get('file') as File | null
+    const file = formData.get('file')
     const tipoEntidad = formData.get('tipoEntidad') as string
     const entidadId = formData.get('entidadId') as string
     const descripcion = formData.get('descripcion') as string | null
 
     // Validate required fields
-    if (!file) {
+    if (!file || !(file instanceof File)) {
       return NextResponse.json(
-        { error: 'No se proporcionó ningún archivo' },
+        { error: 'Archivo inválido o ausente' },
         { status: 400 }
       )
     }
@@ -124,20 +111,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique filename and save
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+    if (!blobToken) {
+      return NextResponse.json(
+        { error: 'Falta configuración de almacenamiento (BLOB_READ_WRITE_TOKEN)' },
+        { status: 500 }
+      )
+    }
+
+    // Generate unique filename and save to Vercel Blob
     const uniqueFilename = generateUniqueFilename(file.name)
-    const subdir = tipoEntidad === 'equipo' ? 'equipos' : tipoEntidad === 'servicio' ? 'servicios' : 'repuestos'
-    const uploadDir = await ensureUploadDir(subdir)
-    const filePath = path.join(uploadDir, uniqueFilename)
-    
-    // Write file to disk
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+    const subdir =
+      tipoEntidad === 'equipo' ? 'equipos' : tipoEntidad === 'servicio' ? 'servicios' : 'repuestos'
+    const objectPath = `${subdir}/${uniqueFilename}`
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { url } = await put(objectPath, buffer, {
+      access: 'public',
+      token: blobToken,
+      contentType: file.type,
+    })
 
     // For repuestos, update the fotoUrl directly instead of creating Archivo record
     if (tipoEntidad === 'repuesto') {
-      const fotoUrl = `/uploads/${subdir}/${uniqueFilename}`
+      const fotoUrl = url
       await prisma.repuesto.update({
         where: { id: entidadId },
         data: { fotoUrl }
@@ -162,7 +159,7 @@ export async function POST(request: NextRequest) {
         nombreAlmacenado: uniqueFilename,
         tipo: file.type,
         tamanio: file.size,
-        ruta: `/uploads/${subdir}/${uniqueFilename}`,
+        ruta: url,
         tipoEntidad,
         equipoId: tipoEntidad === 'equipo' ? entidadId : null,
         servicioTecnicoId: tipoEntidad === 'servicio' ? entidadId : null,
@@ -218,13 +215,19 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Delete file from disk
-    const filePath = path.join(process.cwd(), 'public', archivo.ruta)
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+    if (!blobToken) {
+      return NextResponse.json(
+        { error: 'Falta configuración de almacenamiento (BLOB_READ_WRITE_TOKEN)' },
+        { status: 500 }
+      )
+    }
+
+    // Delete from Vercel Blob (idempotent)
     try {
-      await unlink(filePath)
+      await del(archivo.ruta, { token: blobToken })
     } catch (e) {
-      console.warn('Could not delete file from disk:', e)
-      // Continue with database deletion even if file doesn't exist
+      console.warn('Could not delete blob:', e)
     }
 
     // Delete from database
