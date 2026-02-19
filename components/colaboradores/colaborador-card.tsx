@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ColaboradorCardActions } from './colaborador-card-actions'
+import { ColaboradorAvatarUpload } from './colaborador-avatar-upload'
 import type { Colaborador } from './colaboradores-list'
 
 // ============================================================================
@@ -61,14 +62,13 @@ export function ColaboradorCard({ colaborador }: ColaboradorCardProps) {
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          {/* Avatar / Foto */}
-          <div className="h-14 w-14 flex-shrink-0 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
-            {colaborador.fotoUrl ? (
-              <img src={colaborador.fotoUrl} alt={nombreCompleto} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-lg font-semibold text-primary">{initials}</span>
-            )}
-          </div>
+          {/* Avatar / Foto - Client Component for upload */}
+          <ColaboradorAvatarUpload
+            colaboradorId={colaborador.id}
+            fotoUrl={colaborador.fotoUrl}
+            initials={initials}
+            nombreCompleto={nombreCompleto}
+          />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
