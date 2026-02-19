@@ -28,6 +28,20 @@ export interface Colaborador {
     marca: string
     modelo: string
     tipo: string
+    estadoSalud: string
+    estado: string
+  }>
+  movimientosRepuestos: Array<{
+    id: string
+    cantidad: number
+    createdAt: Date | string
+    repuesto: {
+      id: string
+      nombre: string
+      fotoUrl: string | null
+      codigoInterno: string | null
+      categoria: { nombre: string } | null
+    }
   }>
   archivos: Array<{
     id: string

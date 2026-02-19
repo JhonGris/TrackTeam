@@ -67,7 +67,29 @@ async function getColaboradores(search?: string, sort?: string) {
           marca: true,
           modelo: true,
           tipo: true,
+          estadoSalud: true,
+          estado: true,
         },
+      },
+      movimientosRepuestos: {
+        where: { tipo: 'salida' },
+        select: {
+          id: true,
+          cantidad: true,
+          createdAt: true,
+          repuesto: {
+            select: {
+              id: true,
+              nombre: true,
+              fotoUrl: true,
+              codigoInterno: true,
+              categoria: {
+                select: { nombre: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
       },
       archivos: {
         select: {
