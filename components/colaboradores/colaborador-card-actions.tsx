@@ -7,6 +7,7 @@ import { EditarColaboradorDialog } from './editar-colaborador-dialog'
 import { ConfirmarEliminarColaboradorDialog } from './confirmar-eliminar-colaborador-dialog'
 import { ColaboradorArchivosDialog } from './colaborador-archivos-dialog'
 import { ColaboradorHistorialDialog } from './colaborador-historial-dialog'
+import { DescargarHojaVidaButton } from './descargar-hoja-vida-button'
 import type { Colaborador } from './colaboradores-list'
 
 // ============================================================================
@@ -61,6 +62,10 @@ export function ColaboradorCardActions({ colaborador }: ColaboradorCardActionsPr
         >
           <History className="h-3.5 w-3.5" />
         </Button>
+        <DescargarHojaVidaButton
+          colaboradorId={colaborador.id}
+          colaboradorNombre={`${colaborador.nombre} ${colaborador.apellido}`}
+        />
         <Button
           variant="outline"
           size="sm"

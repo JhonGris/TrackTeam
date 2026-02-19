@@ -54,18 +54,24 @@ export function ColaboradorAvatarUpload({
         throw new Error(result.error || 'Error al subir foto')
       }
 
+      // The upload API returns { archivo: { ruta } } for colaborador uploads
+      const uploadedUrl = result.url || result.archivo?.ruta
+      if (!uploadedUrl) {
+        throw new Error('No se obtuvo la URL del archivo subido')
+      }
+
       // Update fotoUrl in the colaborador record
       const updateResponse = await fetch('/api/colaboradores', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: colaboradorId,
-          fotoUrl: result.url,
+          fotoUrl: uploadedUrl,
         }),
       })
 
       if (updateResponse.ok) {
-        setCurrentFoto(result.url)
+        setCurrentFoto(uploadedUrl)
         router.refresh()
       }
     } catch (err) {
