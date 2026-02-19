@@ -21,6 +21,11 @@ model Colaborador {
   direccion    String?  // Dirección de vivienda
   fotoUrl      String?  // URL de la foto del colaborador (Vercel Blob)
   ciudad       String?
+  
+  // Dotación / Checklist de mobiliario e insumos entregados
+  dotacionJson  String?  // JSON: { basePortatil, audifonos, apoyaPies, escritorio, sillaErgonomica, camara, microfono }
+  observaciones String?  // Observaciones generales
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

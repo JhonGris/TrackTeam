@@ -17,6 +17,8 @@ export interface Colaborador {
   direccion: string | null
   fotoUrl: string | null
   ciudad: string | null
+  dotacionJson: string | null
+  observaciones: string | null
   _count: {
     equipos: number
     archivos: number

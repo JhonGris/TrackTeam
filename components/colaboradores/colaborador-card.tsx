@@ -1,4 +1,4 @@
-import { Mail, Briefcase, MapPin, Laptop, CreditCard, Home, Monitor, Package } from 'lucide-react'
+import { Mail, Briefcase, MapPin, Laptop, CreditCard, Home, Monitor, Package, CheckSquare, MessageSquare } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -17,6 +17,16 @@ const healthColor: Record<string, string> = {
   'Bueno': 'bg-green-100 text-green-800 border-green-200',
   'Regular': 'bg-yellow-100 text-yellow-800 border-yellow-200',
   'Malo': 'bg-red-100 text-red-800 border-red-200',
+}
+
+const DOTACION_LABELS: Record<string, string> = {
+  basePortatil: 'Base Portátil',
+  audifonos: 'Audífonos',
+  apoyaPies: 'Apoya Pies',
+  escritorio: 'Escritorio',
+  sillaErgonomica: 'Silla Ergonómica',
+  camara: 'Cámara',
+  microfono: 'Micrófono',
 }
 
 /**
@@ -163,6 +173,43 @@ export function ColaboradorCard({ colaborador }: ColaboradorCardProps) {
         {colaborador.equipos.length === 0 && inventarioItems.length === 0 && (
           <div className="text-xs text-muted-foreground italic py-1">
             Sin equipos ni inventario asignado
+          </div>
+        )}
+
+        {/* Dotación Entregada */}
+        {(() => {
+          const dotacion = colaborador.dotacionJson
+            ? JSON.parse(colaborador.dotacionJson)
+            : {}
+          const entregados = Object.entries(DOTACION_LABELS).filter(
+            ([key]) => dotacion[key] === true
+          )
+          if (entregados.length === 0) return null
+          return (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Dotación ({entregados.length})
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {entregados.map(([key, label]) => (
+                    <Badge key={key} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      ✓ {label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </>
+          )
+        })()}
+
+        {/* Observaciones */}
+        {colaborador.observaciones && (
+          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+            <MessageSquare className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+            <span className="line-clamp-2">{colaborador.observaciones}</span>
           </div>
         )}
 

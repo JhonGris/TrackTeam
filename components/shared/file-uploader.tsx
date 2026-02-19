@@ -274,7 +274,7 @@ export function FileUploader({
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {archivo.esImagen && (
+                  {(archivo.esImagen || archivo.tipo === 'application/pdf') && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -310,20 +310,28 @@ export function FileUploader({
         </div>
       )}
 
-      {/* Image Preview Dialog */}
+      {/* File Preview Dialog (Images + PDFs) */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{previewName}</DialogTitle>
           </DialogHeader>
           {previewUrl && (
-            <div className="flex justify-center">
-              <img
+            previewName.toLowerCase().endsWith('.pdf') || previewUrl.includes('.pdf') ? (
+              <iframe
                 src={previewUrl}
-                alt={previewName}
-                className="max-h-[70vh] object-contain rounded"
+                title={previewName}
+                className="w-full h-[75vh] rounded border"
               />
-            </div>
+            ) : (
+              <div className="flex justify-center">
+                <img
+                  src={previewUrl}
+                  alt={previewName}
+                  className="max-h-[70vh] object-contain rounded"
+                />
+              </div>
+            )
           )}
         </DialogContent>
       </Dialog>

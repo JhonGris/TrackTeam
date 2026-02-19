@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
 import { updateColaborador } from '@/app/colaboradores/actions'
 
 // ============================================================================
@@ -30,6 +33,8 @@ interface EditarColaboradorDialogProps {
     cedula: string | null
     direccion: string | null
     ciudad: string | null
+    dotacionJson: string | null
+    observaciones: string | null
   }
 }
 
@@ -42,6 +47,11 @@ export function EditarColaboradorDialog({ open, onOpenChange, colaborador }: Edi
   const updateWithId = updateColaborador.bind(null, colaborador.id)
   const [state, formAction, pending] = useActionState(updateWithId, null)
 
+  // Parse dotacion from JSON
+  const dotacion = colaborador.dotacionJson
+    ? JSON.parse(colaborador.dotacionJson)
+    : {}
+
   // Close dialog on successful submission
   useEffect(() => {
     if (state?.success) {
@@ -51,7 +61,7 @@ export function EditarColaboradorDialog({ open, onOpenChange, colaborador }: Edi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Colaborador</DialogTitle>
           <DialogDescription>
@@ -171,6 +181,45 @@ export function EditarColaboradorDialog({ open, onOpenChange, colaborador }: Edi
                 {state.errors.ciudad[0]}
               </p>
             )}
+          </div>
+
+          {/* Dotación / Checklist */}
+          <Separator />
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Dotación Entregada</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { name: 'dotacion_basePortatil', label: 'Base Portátil', key: 'basePortatil' },
+                { name: 'dotacion_audifonos', label: 'Audífonos', key: 'audifonos' },
+                { name: 'dotacion_apoyaPies', label: 'Apoya Pies', key: 'apoyaPies' },
+                { name: 'dotacion_escritorio', label: 'Escritorio', key: 'escritorio' },
+                { name: 'dotacion_sillaErgonomica', label: 'Silla Ergonómica', key: 'sillaErgonomica' },
+                { name: 'dotacion_camara', label: 'Cámara', key: 'camara' },
+                { name: 'dotacion_microfono', label: 'Micrófono', key: 'microfono' },
+              ].map((item) => (
+                <label key={item.name} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name={item.name}
+                    defaultChecked={dotacion[item.key] === true}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  {item.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <Label htmlFor="observaciones">Observaciones</Label>
+            <Textarea
+              id="observaciones"
+              name="observaciones"
+              defaultValue={colaborador.observaciones || ''}
+              placeholder="Notas adicionales sobre el colaborador..."
+              rows={3}
+            />
           </div>
 
           {/* Action Buttons */}

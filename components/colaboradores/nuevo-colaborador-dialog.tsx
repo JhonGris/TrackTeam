@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
 import { createColaborador } from '@/app/colaboradores/actions'
 
 // ============================================================================
@@ -40,7 +43,7 @@ export function NuevoColaboradorDialog({ open, onOpenChange }: NuevoColaboradorD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo Colaborador</DialogTitle>
           <DialogDescription>
@@ -154,6 +157,39 @@ export function NuevoColaboradorDialog({ open, onOpenChange }: NuevoColaboradorD
                 {state.errors.ciudad[0]}
               </p>
             )}
+          </div>
+
+          {/* Dotación / Checklist */}
+          <Separator />
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Dotación Entregada</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { name: 'dotacion_basePortatil', label: 'Base Portátil' },
+                { name: 'dotacion_audifonos', label: 'Audífonos' },
+                { name: 'dotacion_apoyaPies', label: 'Apoya Pies' },
+                { name: 'dotacion_escritorio', label: 'Escritorio' },
+                { name: 'dotacion_sillaErgonomica', label: 'Silla Ergonómica' },
+                { name: 'dotacion_camara', label: 'Cámara' },
+                { name: 'dotacion_microfono', label: 'Micrófono' },
+              ].map((item) => (
+                <label key={item.name} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" name={item.name} className="h-4 w-4 rounded border-gray-300" />
+                  {item.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <Label htmlFor="observaciones">Observaciones</Label>
+            <Textarea
+              id="observaciones"
+              name="observaciones"
+              placeholder="Notas adicionales sobre el colaborador..."
+              rows={3}
+            />
           </div>
 
           {/* Action Buttons */}

@@ -16,6 +16,7 @@ const ColaboradorSchema = z.object({
   cedula: z.string().optional(),
   direccion: z.string().optional(),
   ciudad: z.string().optional(),
+  observaciones: z.string().optional(),
 })
 
 /**
@@ -82,6 +83,7 @@ export async function createColaborador(
     cedula: formData.get('cedula') || undefined,
     direccion: formData.get('direccion') || undefined,
     ciudad: formData.get('ciudad') || undefined,
+    observaciones: formData.get('observaciones') || undefined,
   })
 
   if (!validatedFields.success) {
@@ -92,6 +94,17 @@ export async function createColaborador(
 
   // Separar nombre completo en nombre y apellido
   const { nombre, apellido } = separarNombreCompleto(validatedFields.data.nombreCompleto)
+
+  // Build dotacion JSON from checkbox fields
+  const dotacion = {
+    basePortatil: formData.get('dotacion_basePortatil') === 'on',
+    audifonos: formData.get('dotacion_audifonos') === 'on',
+    apoyaPies: formData.get('dotacion_apoyaPies') === 'on',
+    escritorio: formData.get('dotacion_escritorio') === 'on',
+    sillaErgonomica: formData.get('dotacion_sillaErgonomica') === 'on',
+    camara: formData.get('dotacion_camara') === 'on',
+    microfono: formData.get('dotacion_microfono') === 'on',
+  }
 
   // Check unique cedula if provided
   if (validatedFields.data.cedula) {
@@ -117,6 +130,8 @@ export async function createColaborador(
         cedula: validatedFields.data.cedula || null,
         direccion: validatedFields.data.direccion || null,
         ciudad: validatedFields.data.ciudad,
+        dotacionJson: JSON.stringify(dotacion),
+        observaciones: validatedFields.data.observaciones || null,
       },
     })
 
@@ -172,6 +187,7 @@ export async function updateColaborador(
     cedula: formData.get('cedula') || undefined,
     direccion: formData.get('direccion') || undefined,
     ciudad: formData.get('ciudad') || undefined,
+    observaciones: formData.get('observaciones') || undefined,
   })
 
   if (!validatedFields.success) {
@@ -182,6 +198,17 @@ export async function updateColaborador(
 
   // Separar nombre completo en nombre y apellido
   const { nombre, apellido } = separarNombreCompleto(validatedFields.data.nombreCompleto)
+
+  // Build dotacion JSON from checkbox fields
+  const dotacion = {
+    basePortatil: formData.get('dotacion_basePortatil') === 'on',
+    audifonos: formData.get('dotacion_audifonos') === 'on',
+    apoyaPies: formData.get('dotacion_apoyaPies') === 'on',
+    escritorio: formData.get('dotacion_escritorio') === 'on',
+    sillaErgonomica: formData.get('dotacion_sillaErgonomica') === 'on',
+    camara: formData.get('dotacion_camara') === 'on',
+    microfono: formData.get('dotacion_microfono') === 'on',
+  }
 
   // Check unique cedula if provided (excluding current record)
   if (validatedFields.data.cedula) {
@@ -208,6 +235,8 @@ export async function updateColaborador(
         cedula: validatedFields.data.cedula || null,
         direccion: validatedFields.data.direccion || null,
         ciudad: validatedFields.data.ciudad,
+        dotacionJson: JSON.stringify(dotacion),
+        observaciones: validatedFields.data.observaciones || null,
       },
     })
 
