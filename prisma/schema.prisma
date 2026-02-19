@@ -17,6 +17,9 @@ model Colaborador {
   apellido     String
   cargo        String
   email        String   @unique
+  cedula       String?  @unique // Cédula de Ciudadanía
+  direccion    String?  // Dirección de vivienda
+  fotoUrl      String?  // URL de la foto del colaborador (Vercel Blob)
   ciudad       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -26,8 +29,43 @@ model Colaborador {
   
   // Relación con movimientos de inventario asignados
   movimientosRepuestos MovimientoRepuesto[]
+  
+  // Archivos adjuntos del colaborador
+  archivos Archivo[]
+  
+  // Historial del colaborador
+  historial ColaboradorHistorial[]
 
   @@map("colaboradores")
+}
+
+// Modelo de Historial de Colaborador (Auditoría y trazabilidad)
+model ColaboradorHistorial {
+  id              String   @id @default(cuid())
+  
+  // Colaborador al que pertenece
+  colaboradorId   String
+  colaborador     Colaborador @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+  
+  // Tipo de evento
+  tipo            String   // equipo_asignado, equipo_removido, inventario_asignado, inventario_removido, documento_agregado, dato_actualizado
+  
+  // Descripción del evento
+  descripcion     String
+  
+  // Referencia al item (equipoId, repuestoId, archivoId, etc.)
+  itemId          String?
+  itemTipo        String?  // equipo, repuesto, archivo
+  
+  // Quién realizó la acción
+  responsable     String?  // Nombre o email del responsable
+  
+  // Datos adicionales en JSON (detalles del cambio)
+  detalleJson     String?  // JSON con info adicional
+  
+  createdAt       DateTime @default(now())
+
+  @@map("colaborador_historial")
 }
 
 // Modelo de Equipos (Computers/Laptops)
@@ -133,7 +171,7 @@ model Archivo {
   ruta               String   // Ruta relativa al archivo
   
   // Tipo de entidad relacionada
-  tipoEntidad        String   // "equipo" | "servicio"
+  tipoEntidad        String   // "equipo" | "servicio" | "colaborador"
   
   // Relaciones polimórficas (solo una será usada)
   equipoId           String?
@@ -141,6 +179,9 @@ model Archivo {
   
   servicioTecnicoId  String?
   servicioTecnico    ServicioTecnico? @relation(fields: [servicioTecnicoId], references: [id], onDelete: Cascade)
+  
+  colaboradorId      String?
+  colaborador        Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
   
   // Metadata
   descripcion        String?

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!tipoEntidad || !['equipo', 'servicio', 'repuesto'].includes(tipoEntidad)) {
+    if (!tipoEntidad || !['equipo', 'servicio', 'repuesto', 'colaborador'].includes(tipoEntidad)) {
       return NextResponse.json(
         { error: 'Tipo de entidad inválido' },
         { status: 400 }
@@ -109,6 +109,14 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         )
       }
+    } else if (tipoEntidad === 'colaborador') {
+      const colaborador = await prisma.colaborador.findUnique({ where: { id: entidadId } })
+      if (!colaborador) {
+        return NextResponse.json(
+          { error: 'Colaborador no encontrado' },
+          { status: 404 }
+        )
+      }
     }
 
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN
@@ -122,7 +130,13 @@ export async function POST(request: NextRequest) {
     // Generate unique filename and save to Vercel Blob
     const uniqueFilename = generateUniqueFilename(file.name)
     const subdir =
-      tipoEntidad === 'equipo' ? 'equipos' : tipoEntidad === 'servicio' ? 'servicios' : 'repuestos'
+      tipoEntidad === 'equipo'
+        ? 'equipos'
+        : tipoEntidad === 'servicio'
+        ? 'servicios'
+        : tipoEntidad === 'repuesto'
+        ? 'repuestos'
+        : 'colaboradores'
     const objectPath = `${subdir}/${uniqueFilename}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
@@ -148,6 +162,35 @@ export async function POST(request: NextRequest) {
           tamanio: file.size,
           ruta: fotoUrl,
           esImagen: file.type.startsWith('image/'),
+        },
+      })
+    }
+
+    // For colaboradores, save to Archivo table with colaboradorId
+    if (tipoEntidad === 'colaborador') {
+      const archivo = await prisma.archivo.create({
+        data: {
+          nombre: file.name,
+          nombreAlmacenado: uniqueFilename,
+          tipo: file.type,
+          tamanio: file.size,
+          ruta: url,
+          tipoEntidad,
+          colaboradorId: entidadId,
+          descripcion: descripcion || null,
+          esImagen: file.type.startsWith('image/'),
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        archivo: {
+          id: archivo.id,
+          nombre: archivo.nombre,
+          tipo: archivo.tipo,
+          tamanio: archivo.tamanio,
+          ruta: archivo.ruta,
+          esImagen: archivo.esImagen,
         },
       })
     }

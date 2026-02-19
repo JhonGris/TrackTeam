@@ -13,6 +13,8 @@ const ColaboradorSchema = z.object({
   nombreCompleto: z.string().min(1, 'El nombre completo es requerido').trim(),
   cargo: z.string().min(1, 'El cargo es requerido').trim(),
   email: z.string().email('Email inválido').toLowerCase().trim(),
+  cedula: z.string().optional(),
+  direccion: z.string().optional(),
   ciudad: z.string().optional(),
 })
 
@@ -37,6 +39,8 @@ export type FormState = {
     nombreCompleto?: string[]
     cargo?: string[]
     email?: string[]
+    cedula?: string[]
+    direccion?: string[]
     ciudad?: string[]
     _form?: string[]
   }
@@ -75,6 +79,8 @@ export async function createColaborador(
     nombreCompleto: formData.get('nombreCompleto'),
     cargo: formData.get('cargo'),
     email: formData.get('email'),
+    cedula: formData.get('cedula') || undefined,
+    direccion: formData.get('direccion') || undefined,
     ciudad: formData.get('ciudad') || undefined,
   })
 
@@ -87,22 +93,46 @@ export async function createColaborador(
   // Separar nombre completo en nombre y apellido
   const { nombre, apellido } = separarNombreCompleto(validatedFields.data.nombreCompleto)
 
+  // Check unique cedula if provided
+  if (validatedFields.data.cedula) {
+    const existingCedula = await prisma.colaborador.findUnique({
+      where: { cedula: validatedFields.data.cedula },
+    })
+    if (existingCedula) {
+      return {
+        message: 'Esta cédula ya está registrada',
+        errors: { cedula: ['Esta cédula ya está registrada'] },
+      }
+    }
+  }
+
   // Create colaborador
   try {
-    await prisma.colaborador.create({
+    const colaborador = await prisma.colaborador.create({
       data: {
         nombre,
         apellido,
         cargo: validatedFields.data.cargo,
         email: validatedFields.data.email,
+        cedula: validatedFields.data.cedula || null,
+        direccion: validatedFields.data.direccion || null,
         ciudad: validatedFields.data.ciudad,
       },
     })
+
+    // Registrar en historial
+    await prisma.colaboradorHistorial.create({
+      data: {
+        colaboradorId: colaborador.id,
+        tipo: 'dato_actualizado',
+        descripcion: `Colaborador creado: ${nombre} ${apellido}`,
+      },
+    })
   } catch (error) {
-    // Handle unique constraint violation (duplicate email)
+    // Handle unique constraint violation (duplicate email or cedula)
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return {
-        message: 'Este email ya está registrado',
+        message: 'Este email o cédula ya está registrado',
         errors: {
           email: ['Este email ya está registrado'],
         },
@@ -139,6 +169,8 @@ export async function updateColaborador(
     nombreCompleto: formData.get('nombreCompleto'),
     cargo: formData.get('cargo'),
     email: formData.get('email'),
+    cedula: formData.get('cedula') || undefined,
+    direccion: formData.get('direccion') || undefined,
     ciudad: formData.get('ciudad') || undefined,
   })
 
@@ -151,6 +183,19 @@ export async function updateColaborador(
   // Separar nombre completo en nombre y apellido
   const { nombre, apellido } = separarNombreCompleto(validatedFields.data.nombreCompleto)
 
+  // Check unique cedula if provided (excluding current record)
+  if (validatedFields.data.cedula) {
+    const existingCedula = await prisma.colaborador.findFirst({
+      where: { cedula: validatedFields.data.cedula, NOT: { id } },
+    })
+    if (existingCedula) {
+      return {
+        message: 'Esta cédula ya está registrada',
+        errors: { cedula: ['Esta cédula ya está registrada'] },
+      }
+    }
+  }
+
   // Update colaborador
   try {
     await prisma.colaborador.update({
@@ -160,7 +205,18 @@ export async function updateColaborador(
         apellido,
         cargo: validatedFields.data.cargo,
         email: validatedFields.data.email,
+        cedula: validatedFields.data.cedula || null,
+        direccion: validatedFields.data.direccion || null,
         ciudad: validatedFields.data.ciudad,
+      },
+    })
+
+    // Registrar en historial
+    await prisma.colaboradorHistorial.create({
+      data: {
+        colaboradorId: id,
+        tipo: 'dato_actualizado',
+        descripcion: `Datos actualizados del colaborador`,
       },
     })
   } catch (error) {
@@ -174,10 +230,10 @@ export async function updateColaborador(
       }
     }
 
-    // Handle unique constraint violation (duplicate email)
+    // Handle unique constraint violation (duplicate email or cedula)
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return {
-        message: 'Este email ya está registrado',
+        message: 'Este email o cédula ya está registrado',
         errors: {
           email: ['Este email ya está registrado'],
         },
@@ -303,5 +359,100 @@ export async function createColaboradorQuick(data: {
       success: false,
       error: 'Ocurrió un error al crear el colaborador',
     }
+  }
+}
+
+// ============================================================================
+// HISTORIAL - Consulta y registro de eventos
+// ============================================================================
+
+/**
+ * Get historial for a colaborador
+ */
+export async function getColaboradorHistorial(colaboradorId: string) {
+  return prisma.colaboradorHistorial.findMany({
+    where: { colaboradorId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+}
+
+/**
+ * Get full colaborador details with historial, archivos, and equipos
+ */
+export async function getColaboradorDetalle(id: string) {
+  return prisma.colaborador.findUnique({
+    where: { id },
+    include: {
+      equipos: {
+        select: {
+          id: true,
+          serial: true,
+          marca: true,
+          modelo: true,
+          tipo: true,
+          estadoSalud: true,
+          estado: true,
+        },
+      },
+      archivos: {
+        select: {
+          id: true,
+          nombre: true,
+          tipo: true,
+          tamanio: true,
+          ruta: true,
+          esImagen: true,
+          descripcion: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      historial: {
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      },
+      movimientosRepuestos: {
+        include: {
+          repuesto: {
+            select: { nombre: true, codigoInterno: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      },
+    },
+  })
+}
+
+/**
+ * Register a historial event for a colaborador
+ */
+export async function registrarHistorialColaborador(data: {
+  colaboradorId: string
+  tipo: string
+  descripcion: string
+  itemId?: string
+  itemTipo?: string
+  responsable?: string
+  detalleJson?: string
+}) {
+  try {
+    await prisma.colaboradorHistorial.create({
+      data: {
+        colaboradorId: data.colaboradorId,
+        tipo: data.tipo,
+        descripcion: data.descripcion,
+        itemId: data.itemId || null,
+        itemTipo: data.itemTipo || null,
+        responsable: data.responsable || null,
+        detalleJson: data.detalleJson || null,
+      },
+    })
+    revalidatePath('/colaboradores')
+    return { success: true }
+  } catch (error) {
+    console.error('Error registrando historial:', error)
+    return { error: 'Error al registrar el historial' }
   }
 }

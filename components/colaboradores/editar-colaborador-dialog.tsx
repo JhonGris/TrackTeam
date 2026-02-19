@@ -27,6 +27,8 @@ interface EditarColaboradorDialogProps {
     apellido: string
     cargo: string
     email: string
+    cedula: string | null
+    direccion: string | null
     ciudad: string | null
   }
 }
@@ -116,6 +118,40 @@ export function EditarColaboradorDialog({ open, onOpenChange, colaborador }: Edi
             {state?.errors?.email && (
               <p id="email-error" className="text-sm text-destructive">
                 {state.errors.email[0]}
+              </p>
+            )}
+          </div>
+
+          {/* Cédula Field */}
+          <div className="space-y-2">
+            <Label htmlFor="cedula">Cédula de Ciudadanía</Label>
+            <Input
+              id="cedula"
+              name="cedula"
+              defaultValue={colaborador.cedula || ''}
+              placeholder="Ej: 1234567890"
+              aria-describedby="cedula-error"
+            />
+            {state?.errors?.cedula && (
+              <p id="cedula-error" className="text-sm text-destructive">
+                {state.errors.cedula[0]}
+              </p>
+            )}
+          </div>
+
+          {/* Dirección Field */}
+          <div className="space-y-2">
+            <Label htmlFor="direccion">Dirección de Vivienda</Label>
+            <Input
+              id="direccion"
+              name="direccion"
+              defaultValue={colaborador.direccion || ''}
+              placeholder="Ej: Calle 123 #45-67, Barrio Centro"
+              aria-describedby="direccion-error"
+            />
+            {state?.errors?.direccion && (
+              <p id="direccion-error" className="text-sm text-destructive">
+                {state.errors.direccion[0]}
               </p>
             )}
           </div>

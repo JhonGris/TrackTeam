@@ -1,9 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { writeFile, mkdir } from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
 import prisma from '@/lib/prisma'
 import { sendMovimientoInventarioEmail } from '@/lib/email'
 
@@ -11,23 +8,40 @@ import { sendMovimientoInventarioEmail } from '@/lib/email'
 // HELPER FUNCTIONS
 // ============================================================================
 
-function generateUniqueFilename(originalName: string): string {
-  const timestamp = Date.now()
-  const random = Math.random().toString(36).substring(2, 8)
-  const ext = path.extname(originalName)
-  const baseName = path.basename(originalName, ext)
-    .replace(/[^a-zA-Z0-9]/g, '-')
-    .substring(0, 50)
-  return `${baseName}-${timestamp}-${random}${ext}`
+function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, '')
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return 'http://localhost:3000'
 }
 
-async function ensureUploadDir(subdir: string): Promise<string> {
-  const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
-  const dirPath = path.join(UPLOAD_DIR, subdir)
-  if (!existsSync(dirPath)) {
-    await mkdir(dirPath, { recursive: true })
+async function uploadFileToBlob(file: File, tipoEntidad: 'repuesto' | 'colaborador', entidadId: string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('tipoEntidad', tipoEntidad)
+  formData.append('entidadId', entidadId)
+
+  const response = await fetch(`${getBaseUrl()}/api/upload`, {
+    method: 'POST',
+    body: formData,
+    cache: 'no-store',
+  })
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(result?.error || 'Error al subir el archivo')
   }
-  return dirPath
+
+  const url = result?.archivo?.ruta || result?.url
+  if (!url) {
+    throw new Error('No se recibió la URL del archivo')
+  }
+
+  return url as string
 }
 
 // ============================================================================
@@ -242,27 +256,16 @@ export async function createRepuesto(formData: FormData) {
       }
     }
 
-    // Procesar foto si se proporcionó
-    let fotoUrl: string | null = null
+    // Validar foto si se proporcionó
+    let debeSubirFoto = false
     if (foto && foto.size > 0) {
-      // Validar tipo de archivo
       if (!foto.type.startsWith('image/')) {
         return { error: 'Solo se permiten archivos de imagen' }
       }
-      // Validar tamaño (max 10MB)
       if (foto.size > 10 * 1024 * 1024) {
         return { error: 'La imagen no debe superar 10MB' }
       }
-
-      const uniqueFilename = generateUniqueFilename(foto.name)
-      const uploadDir = await ensureUploadDir('repuestos')
-      const filePath = path.join(uploadDir, uniqueFilename)
-      
-      const bytes = await foto.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      await writeFile(filePath, buffer)
-      
-      fotoUrl = `/uploads/repuestos/${uniqueFilename}`
+      debeSubirFoto = true
     }
 
     // Obtener el siguiente número consecutivo
@@ -272,7 +275,7 @@ export async function createRepuesto(formData: FormData) {
     })
     const siguienteNumero = (ultimoRepuesto?.numero ?? -1) + 1
 
-    const repuesto = await prisma.repuesto.create({
+    let repuesto = await prisma.repuesto.create({
       data: {
         numero: siguienteNumero,
         nombre: nombre.trim(),
@@ -285,9 +288,20 @@ export async function createRepuesto(formData: FormData) {
         proveedor: proveedor?.trim() || null,
         asignadoA: asignadoA?.trim() || null,
         codigoInterno: codigoInterno?.trim() || null,
-        fotoUrl
+        fotoUrl: null
       }
     })
+
+    if (debeSubirFoto && foto) {
+      try {
+        const fotoUrl = await uploadFileToBlob(foto, 'repuesto', repuesto.id)
+        repuesto = { ...repuesto, fotoUrl }
+      } catch (uploadError) {
+        console.error('Error uploading repuesto image:', uploadError)
+        await prisma.repuesto.delete({ where: { id: repuesto.id } })
+        return { error: 'Error al subir la imagen del repuesto' }
+      }
+    }
 
     revalidatePath('/inventario')
     return { success: true, repuesto }
@@ -418,16 +432,19 @@ export async function registrarMovimiento(formData: FormData) {
     // Procesar foto del movimiento si existe
     let fotoUrl: string | null = null
     if (foto && foto.size > 0) {
-      const uploadDir = await ensureUploadDir('movimientos')
-      
-      const filename = generateUniqueFilename(foto.name)
-      const filepath = path.join(uploadDir, filename)
-      
-      const bytes = await foto.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      await writeFile(filepath, buffer)
-      
-      fotoUrl = `/uploads/movimientos/${filename}`
+      if (!foto.type.startsWith('image/')) {
+        return { error: 'Solo se permiten archivos de imagen' }
+      }
+      if (foto.size > 10 * 1024 * 1024) {
+        return { error: 'La imagen no debe superar 10MB' }
+      }
+
+      try {
+        fotoUrl = await uploadFileToBlob(foto, 'repuesto', repuestoId)
+      } catch (uploadError) {
+        console.error('Error uploading movimiento image:', uploadError)
+        return { error: 'Error al subir la imagen del movimiento' }
+      }
     }
 
     // Obtener colaborador si se especificó

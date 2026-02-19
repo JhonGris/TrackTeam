@@ -13,9 +13,14 @@ export interface Colaborador {
   apellido: string
   cargo: string
   email: string
+  cedula: string | null
+  direccion: string | null
+  fotoUrl: string | null
   ciudad: string | null
   _count: {
     equipos: number
+    archivos: number
+    historial: number
   }
   equipos: Array<{
     id: string
@@ -23,6 +28,16 @@ export interface Colaborador {
     marca: string
     modelo: string
     tipo: string
+  }>
+  archivos: Array<{
+    id: string
+    nombre: string
+    tipo: string
+    tamanio: number
+    ruta: string
+    esImagen: boolean
+    descripcion: string | null
+    createdAt: Date | string
   }>
 }
 

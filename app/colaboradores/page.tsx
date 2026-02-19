@@ -52,12 +52,13 @@ async function getColaboradores(search?: string, sort?: string) {
             { nombre: { contains: search } },
             { apellido: { contains: search } },
             { email: { contains: search } },
+            { cedula: { contains: search } },
           ],
         }
       : undefined,
     include: {
       _count: {
-        select: { equipos: true },
+        select: { equipos: true, archivos: true, historial: true },
       },
       equipos: {
         select: {
@@ -67,6 +68,19 @@ async function getColaboradores(search?: string, sort?: string) {
           modelo: true,
           tipo: true,
         },
+      },
+      archivos: {
+        select: {
+          id: true,
+          nombre: true,
+          tipo: true,
+          tamanio: true,
+          ruta: true,
+          esImagen: true,
+          descripcion: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
       },
     },
     orderBy,

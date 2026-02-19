@@ -49,7 +49,7 @@ type Archivo = {
   createdAt: string
 }
 
-type TipoEntidad = 'equipo' | 'servicio'
+type TipoEntidad = 'equipo' | 'servicio' | 'colaborador'
 
 interface FileUploaderProps {
   tipoEntidad: TipoEntidad
