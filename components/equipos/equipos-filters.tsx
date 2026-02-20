@@ -1,7 +1,8 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Search, Rows, PanelsTopLeft } from 'lucide-react'
+import { useState, useEffect, useTransition, useCallback } from 'react'
+import { Search, Rows, PanelsTopLeft, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -24,8 +25,34 @@ export function EquiposFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
-  const createQueryString = (name: string, value: string) => {
+  const searchFromUrl = searchParams?.get('search') || ''
+  const [localSearch, setLocalSearch] = useState(searchFromUrl)
+
+  // Sync local state when URL changes externally
+  useEffect(() => {
+    setLocalSearch(searchFromUrl)
+  }, [searchFromUrl])
+
+  // Debounce search: update URL 400ms after typing stops
+  useEffect(() => {
+    if (localSearch === searchFromUrl) return
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString() || '')
+      if (localSearch) {
+        params.set('search', localSearch)
+      } else {
+        params.delete('search')
+      }
+      startTransition(() => {
+        router.push(pathname + '?' + params.toString())
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [localSearch, searchFromUrl, searchParams, pathname, router])
+
+  const createQueryString = useCallback((name: string, value: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '')
     if (value) {
       params.set(name, value)
@@ -33,11 +60,7 @@ export function EquiposFilters() {
       params.delete(name)
     }
     return params.toString()
-  }
-
-  const handleSearch = (value: string) => {
-    router.push(pathname + '?' + createQueryString('search', value))
-  }
+  }, [searchParams])
 
   const handleTipoFilter = (value: string) => {
     router.push(pathname + '?' + createQueryString('tipo', value))
@@ -103,9 +126,12 @@ export function EquiposFilters() {
           type="search"
           placeholder="Buscar por serial, marca, modelo o colaborador..."
           className="pl-9"
-          defaultValue={searchParams?.get('search') || ''}
-          onChange={(e) => handleSearch(e.target.value)}
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
         />
+        {isPending && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
       </div>
 
       {/* Tipo Filter */}

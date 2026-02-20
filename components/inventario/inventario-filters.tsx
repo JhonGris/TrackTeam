@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Search, Filter, X } from 'lucide-react'
+import { Search, Filter, X, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +14,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import type { CategoriaRepuesto } from '@/types/repuestos'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useTransition, useState, useEffect } from 'react'
 
 type Props = {
   categorias: CategoriaRepuesto[]
@@ -29,6 +29,23 @@ export function InventarioFilters({ categorias }: Props) {
   const search = searchParams.get('search') || ''
   const categoria = searchParams.get('categoria') || ''
   const stockBajo = searchParams.get('stockBajo') === 'true'
+
+  // Local state for instant typing feedback
+  const [localSearch, setLocalSearch] = useState(search)
+
+  // Sync local state when URL changes externally
+  useEffect(() => {
+    setLocalSearch(search)
+  }, [search])
+
+  // Debounce search: update URL 400ms after typing stops
+  useEffect(() => {
+    if (localSearch === search) return
+    const timer = setTimeout(() => {
+      updateFilters({ search: localSearch || null })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [localSearch, search])
 
   const updateFilters = useCallback(
     (updates: Record<string, string | null>) => {
@@ -69,16 +86,12 @@ export function InventarioFilters({ categorias }: Props) {
               id="search"
               placeholder="Nombre, código, proveedor..."
               className="pl-9"
-              defaultValue={search}
-              onChange={(e) => {
-                const value = e.target.value
-                // Debounce de 300ms
-                const timeoutId = setTimeout(() => {
-                  updateFilters({ search: value || null })
-                }, 300)
-                return () => clearTimeout(timeoutId)
-              }}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
             />
+            {isPending && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
           </div>
         </div>
 

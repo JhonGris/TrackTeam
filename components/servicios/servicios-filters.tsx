@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ArrowUpDown, LayoutGrid, Rows, Search } from 'lucide-react'
+import { ArrowUpDown, LayoutGrid, Rows, Search, Loader2 } from 'lucide-react'
 
 // ============================================================================
 // CLIENT COMPONENT - URL State Management for Servicios Filters
@@ -20,11 +20,36 @@ export function ServiciosFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   const searchQuery = searchParams?.get('search') || ''
   const tipoFilter = searchParams?.get('tipo') || 'all'
   const sortBy = searchParams?.get('sort') || 'recent'
   const view = searchParams?.get('view') || 'grid'
+
+  const [localSearch, setLocalSearch] = useState(searchQuery)
+
+  // Sync local state when URL changes externally
+  useEffect(() => {
+    setLocalSearch(searchQuery)
+  }, [searchQuery])
+
+  // Debounce search: update URL 400ms after typing stops
+  useEffect(() => {
+    if (localSearch === searchQuery) return
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString() || '')
+      if (localSearch) {
+        params.set('search', localSearch)
+      } else {
+        params.delete('search')
+      }
+      startTransition(() => {
+        router.push(pathname + (params.toString() ? `?${params.toString()}` : ''))
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [localSearch, searchQuery, searchParams, pathname, router])
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -38,11 +63,6 @@ export function ServiciosFilters() {
     },
     [searchParams]
   )
-
-  const handleSearchChange = (value: string) => {
-    const queryString = createQueryString('search', value)
-    router.push(pathname + (queryString ? `?${queryString}` : ''))
-  }
 
   const handleTipoChange = (value: string) => {
     const queryString = createQueryString('tipo', value)
@@ -81,10 +101,13 @@ export function ServiciosFilters() {
           <Input
             type="text"
             placeholder="Buscar por equipo, colaborador, problema..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9"
           />
+          {isPending && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
         </div>
 
         <div className="flex items-center gap-2 self-start">

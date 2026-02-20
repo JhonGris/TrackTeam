@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ArrowUpDown, Calendar, SortAsc, PanelsTopLeft, Rows } from 'lucide-react'
+import { ArrowUpDown, Calendar, SortAsc, PanelsTopLeft, Rows, Loader2 } from 'lucide-react'
 
 // ============================================================================
 // CLIENT COMPONENT - URL State Management (Single Responsibility)
@@ -25,10 +25,36 @@ export function ColaboradoresFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   const searchQuery = searchParams?.get('search') || ''
   const sortBy = searchParams?.get('sort') || 'alphabetical'
   const view = (searchParams?.get('view') as 'grid' | 'list') || 'grid'
+
+  // Local state for instant typing feedback
+  const [localSearch, setLocalSearch] = useState(searchQuery)
+
+  // Sync local state when URL changes externally
+  useEffect(() => {
+    setLocalSearch(searchQuery)
+  }, [searchQuery])
+
+  // Debounce search: update URL 400ms after typing stops
+  useEffect(() => {
+    if (localSearch === searchQuery) return
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString() || '')
+      if (localSearch) {
+        params.set('search', localSearch)
+      } else {
+        params.delete('search')
+      }
+      startTransition(() => {
+        router.push(pathname + (params.toString() ? `?${params.toString()}` : ''))
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [localSearch, searchQuery, searchParams, pathname, router])
 
   // Helper to create query string (DRY principle)
   const createQueryString = useCallback(
@@ -43,12 +69,6 @@ export function ColaboradoresFilters() {
     },
     [searchParams]
   )
-
-  // Update URL with new search query
-  const handleSearchChange = (value: string) => {
-    const queryString = createQueryString('search', value)
-    router.push(pathname + (queryString ? `?${queryString}` : ''))
-  }
 
   // Update URL with new sort option
   const handleSortChange = (value: string) => {
@@ -75,12 +95,16 @@ export function ColaboradoresFilters() {
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-      <Input
-        placeholder="Buscar por nombre, apellido o email..."
-        value={searchQuery}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        className="max-w-md"
-      />
+      <div className="relative max-w-md">
+        <Input
+          placeholder="Buscar por nombre, apellido o email..."
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+        />
+        {isPending && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
