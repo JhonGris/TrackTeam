@@ -67,6 +67,17 @@ export async function GET(
           },
           orderBy: { createdAt: 'desc' },
         },
+        archivos: {
+          select: {
+            id: true,
+            nombre: true,
+            tipo: true,
+            tamanio: true,
+            descripcion: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
         historial: {
           orderBy: { createdAt: 'desc' },
           take: 50,
@@ -376,6 +387,67 @@ export async function GET(
           1: { cellWidth: 35 },
           2: { cellWidth: 50 },
           3: { cellWidth: 25 },
+        },
+        margin: { left: 14, right: 14 },
+      })
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yPos = (doc as any).lastAutoTable.finalY + 10
+    }
+
+    // ========== DOCUMENTOS ADJUNTOS ==========
+    if (colaborador.archivos.length > 0) {
+      drawSectionTitle(`Documentos Adjuntos (${colaborador.archivos.length})`)
+
+      const formatFileSize = (bytes: number): string => {
+        if (bytes < 1024) return `${bytes} B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      }
+
+      const fileTypeLabels: Record<string, string> = {
+        'application/pdf': 'PDF',
+        'image/jpeg': 'Imagen JPEG',
+        'image/png': 'Imagen PNG',
+        'image/webp': 'Imagen WebP',
+        'application/msword': 'Word',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
+        'application/vnd.ms-excel': 'Excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+      }
+
+      checkPageBreak(20 + colaborador.archivos.length * 8)
+
+      const archivosBody = colaborador.archivos.map(a => [
+        a.nombre.length > 45 ? a.nombre.substring(0, 42) + '...' : a.nombre,
+        fileTypeLabels[a.tipo] || a.tipo.split('/').pop()?.toUpperCase() || a.tipo,
+        formatFileSize(a.tamanio),
+        a.descripcion
+          ? (a.descripcion.length > 40 ? a.descripcion.substring(0, 37) + '...' : a.descripcion)
+          : '—',
+        formatDateShort(a.createdAt),
+      ])
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Documento', 'Tipo', 'Tamaño', 'Descripción', 'Fecha']],
+        body: archivosBody,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [30, 64, 175],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        columnStyles: {
+          0: { cellWidth: 55 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 22 },
+          3: { cellWidth: 50 },
+          4: { cellWidth: 28 },
         },
         margin: { left: 14, right: 14 },
       })
