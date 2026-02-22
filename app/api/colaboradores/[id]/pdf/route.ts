@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import prisma from '@/lib/prisma'
-
-// Use the existing jsPDF module augmentation from equipo PDF route
-// (avoiding duplicate/conflicting declarations)
 
 // ============================================================================
 // PDF GENERATION API - Colaborador Life Sheet (Hoja de Vida)
@@ -360,7 +357,7 @@ export async function GET(
         item.cantidad.toString(),
       ])
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Artículo', 'Código', 'Categoría', 'Cantidad']],
         body: tableBody,
@@ -383,7 +380,8 @@ export async function GET(
         margin: { left: 14, right: 14 },
       })
 
-      yPos = doc.lastAutoTable.finalY + 10
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yPos = (doc as any).lastAutoTable.finalY + 10
     }
 
     // ========== HISTORIAL ==========
@@ -409,7 +407,7 @@ export async function GET(
           : h.descripcion,
       ])
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Fecha', 'Tipo', 'Descripción']],
         body: histBody,
@@ -431,7 +429,8 @@ export async function GET(
         margin: { left: 14, right: 14 },
       })
 
-      yPos = doc.lastAutoTable.finalY + 10
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yPos = (doc as any).lastAutoTable.finalY + 10
     }
 
     // ========== FOOTER ==========

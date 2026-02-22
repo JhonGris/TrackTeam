@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import prisma from '@/lib/prisma'
-
-// Extend jsPDF type for autotable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: {
-      startY?: number
-      head?: string[][]
-      body?: (string | number)[][]
-      theme?: string
-      headStyles?: Record<string, unknown>
-      styles?: Record<string, unknown>
-      columnStyles?: Record<string, Record<string, unknown>>
-      margin?: { left?: number; right?: number }
-    }) => jsPDF
-    lastAutoTable: { finalY: number }
-  }
-}
 
 // ============================================================================
 // PDF GENERATION API - Equipment Life Sheet (using jsPDF)
@@ -238,7 +221,7 @@ export async function GET(
         s.estadoResultante,
       ])
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Fecha', 'Tipo', 'Problemas', 'Soluciones', 'Tiempo', 'Estado']],
         body: tableBody,
@@ -263,7 +246,8 @@ export async function GET(
         margin: { left: 14, right: 14 },
       })
 
-      yPos = doc.lastAutoTable.finalY + 10
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yPos = (doc as any).lastAutoTable.finalY + 10
     } else {
       doc.setTextColor(150, 150, 150)
       doc.setFontSize(10)
