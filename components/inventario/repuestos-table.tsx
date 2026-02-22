@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreHorizontal, Pencil, Trash2, Package, History, ArrowLeftRight } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Package, History, ArrowLeftRight, User } from 'lucide-react'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,9 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
     return num.toString().padStart(3, '0')
   }
 
+  // Check if item is assigned (cantidad === 0 means assigned to someone)
+  const isAssigned = (repuesto: RepuestoConCategoria) => repuesto.cantidad === 0
+
   if (repuestos.length === 0) {
     return (
       <div className="text-center py-12">
@@ -54,7 +58,10 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
         {repuestos.map((repuesto) => (
           <div 
             key={repuesto.id}
-            className="bg-card border rounded-none p-4 hover:shadow-md transition-shadow"
+            className={cn(
+              "bg-card border rounded-none p-4 hover:shadow-md transition-shadow",
+              isAssigned(repuesto) && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-700"
+            )}
           >
             <div className="flex gap-4">
               {/* Foto */}
@@ -141,10 +148,17 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
                 </div>
 
                 {/* Asignado a */}
-                {repuesto.asignadoA && (
+                {(repuesto.asignadoA || isAssigned(repuesto)) && (
                   <div className="mt-2 pt-2 border-t">
-                    <span className="text-xs text-muted-foreground">
-                      Asignado a: <span className="text-foreground">{repuesto.asignadoA}</span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {isAssigned(repuesto) ? (
+                        <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300">
+                          Asignado{repuesto.asignadoA ? `: ${repuesto.asignadoA}` : ''}
+                        </Badge>
+                      ) : (
+                        <span>Asignado a: <span className="text-foreground">{repuesto.asignadoA}</span></span>
+                      )}
                     </span>
                   </div>
                 )}

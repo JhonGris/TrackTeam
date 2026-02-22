@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
+import { sendMovimientoInventarioEmail } from '@/lib/email'
 
 // ============================================================================
 // SCHEMAS - Validation Layer (Single Responsibility)
@@ -483,5 +484,239 @@ export async function registrarHistorialColaborador(data: {
   } catch (error) {
     console.error('Error registrando historial:', error)
     return { error: 'Error al registrar el historial' }
+  }
+}
+
+// ============================================================================
+// INVENTARIO - Asignación de objetos a colaboradores
+// ============================================================================
+
+/**
+ * Get available inventory items (not currently assigned to anyone)
+ * An item is available when cantidad > 0 (entrada registrada, no salida pendiente)
+ */
+export async function getRepuestosDisponibles() {
+  return prisma.repuesto.findMany({
+    where: {
+      activo: true,
+      cantidad: { gt: 0 },
+    },
+    include: {
+      categoria: {
+        select: { nombre: true, color: true },
+      },
+    },
+    orderBy: { nombre: 'asc' },
+  })
+}
+
+/**
+ * Get inventory items currently assigned to a specific collaborator
+ */
+export async function getRepuestosAsignados(colaboradorId: string) {
+  const movimientos = await prisma.movimientoRepuesto.findMany({
+    where: {
+      colaboradorId,
+      tipo: 'salida',
+    },
+    include: {
+      repuesto: {
+        include: {
+          categoria: {
+            select: { nombre: true, color: true },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  // Deduplicate: only keep repuestos whose current stock is 0 (still assigned)
+  const seen = new Set<string>()
+  const asignados = []
+  for (const mov of movimientos) {
+    if (!seen.has(mov.repuestoId) && mov.repuesto.cantidad === 0) {
+      seen.add(mov.repuestoId)
+      asignados.push({
+        movimientoId: mov.id,
+        repuestoId: mov.repuesto.id,
+        nombre: mov.repuesto.nombre,
+        descripcion: mov.repuesto.descripcion,
+        codigoInterno: mov.repuesto.codigoInterno,
+        fotoUrl: mov.repuesto.fotoUrl,
+        categoria: mov.repuesto.categoria,
+        fechaAsignacion: mov.createdAt,
+        notificacionEnviada: mov.notificacionEnviada,
+      })
+    }
+  }
+
+  return asignados
+}
+
+/**
+ * Assign an inventory item to a collaborator
+ */
+export async function asignarRepuestoAColaborador(
+  colaboradorId: string,
+  repuestoId: string,
+  motivo?: string
+) {
+  try {
+    const [colaborador, repuesto] = await Promise.all([
+      prisma.colaborador.findUnique({ where: { id: colaboradorId } }),
+      prisma.repuesto.findUnique({ where: { id: repuestoId } }),
+    ])
+
+    if (!colaborador) return { error: 'Colaborador no encontrado' }
+    if (!repuesto) return { error: 'Objeto de inventario no encontrado' }
+    if (!repuesto.activo) return { error: 'Este objeto está desactivado' }
+    if (repuesto.cantidad === 0) return { error: 'Este objeto ya está asignado a otro colaborador' }
+
+    await prisma.$transaction([
+      prisma.repuesto.update({
+        where: { id: repuestoId },
+        data: { cantidad: 0 },
+      }),
+      prisma.movimientoRepuesto.create({
+        data: {
+          repuestoId,
+          tipo: 'salida',
+          cantidad: -1,
+          cantidadAnterior: repuesto.cantidad,
+          cantidadNueva: 0,
+          motivo: motivo?.trim() || `Asignado a ${colaborador.nombre} ${colaborador.apellido}`,
+          colaboradorId,
+          notificacionEnviada: false,
+        },
+      }),
+      prisma.colaboradorHistorial.create({
+        data: {
+          colaboradorId,
+          tipo: 'inventario_asignado',
+          descripcion: `Objeto asignado: ${repuesto.nombre}${repuesto.codigoInterno ? ` (${repuesto.codigoInterno})` : ''}`,
+          itemId: repuestoId,
+          itemTipo: 'repuesto',
+        },
+      }),
+    ])
+
+    revalidatePath('/colaboradores')
+    revalidatePath('/inventario')
+    return { success: true }
+  } catch (error) {
+    console.error('Error asignando repuesto:', error)
+    return { error: 'Error al asignar el objeto' }
+  }
+}
+
+/**
+ * Unassign an inventory item from a collaborator
+ */
+export async function desasignarRepuestoDeColaborador(
+  colaboradorId: string,
+  repuestoId: string
+) {
+  try {
+    const [colaborador, repuesto] = await Promise.all([
+      prisma.colaborador.findUnique({ where: { id: colaboradorId } }),
+      prisma.repuesto.findUnique({ where: { id: repuestoId } }),
+    ])
+
+    if (!colaborador) return { error: 'Colaborador no encontrado' }
+    if (!repuesto) return { error: 'Objeto de inventario no encontrado' }
+
+    await prisma.$transaction([
+      prisma.repuesto.update({
+        where: { id: repuestoId },
+        data: { cantidad: 1 },
+      }),
+      prisma.movimientoRepuesto.create({
+        data: {
+          repuestoId,
+          tipo: 'entrada',
+          cantidad: 1,
+          cantidadAnterior: 0,
+          cantidadNueva: 1,
+          motivo: `Devuelto por ${colaborador.nombre} ${colaborador.apellido}`,
+          colaboradorId,
+          notificacionEnviada: false,
+        },
+      }),
+      prisma.colaboradorHistorial.create({
+        data: {
+          colaboradorId,
+          tipo: 'inventario_removido',
+          descripcion: `Objeto devuelto: ${repuesto.nombre}${repuesto.codigoInterno ? ` (${repuesto.codigoInterno})` : ''}`,
+          itemId: repuestoId,
+          itemTipo: 'repuesto',
+        },
+      }),
+    ])
+
+    revalidatePath('/colaboradores')
+    revalidatePath('/inventario')
+    return { success: true }
+  } catch (error) {
+    console.error('Error desasignando repuesto:', error)
+    return { error: 'Error al desasignar el objeto' }
+  }
+}
+
+/**
+ * Send notification email for an inventory assignment
+ */
+export async function enviarNotificacionAsignacion(
+  colaboradorId: string,
+  repuestoId: string,
+  movimientoId?: string
+) {
+  try {
+    const [colaborador, repuesto] = await Promise.all([
+      prisma.colaborador.findUnique({ where: { id: colaboradorId } }),
+      prisma.repuesto.findUnique({ where: { id: repuestoId } }),
+    ])
+
+    if (!colaborador) return { error: 'Colaborador no encontrado' }
+    if (!repuesto) return { error: 'Objeto de inventario no encontrado' }
+
+    const emailResult = await sendMovimientoInventarioEmail({
+      colaborador: {
+        nombre: colaborador.nombre,
+        apellido: colaborador.apellido,
+        email: colaborador.email,
+        cargo: colaborador.cargo,
+      },
+      repuesto: {
+        nombre: repuesto.nombre,
+        descripcion: repuesto.descripcion,
+        codigoInterno: repuesto.codigoInterno,
+        fotoUrl: repuesto.fotoUrl,
+        unidad: repuesto.unidad,
+      },
+      movimiento: {
+        tipo: 'salida',
+        cantidad: -1,
+        motivo: `Asignado a ${colaborador.nombre} ${colaborador.apellido}`,
+        referencia: null,
+        fecha: new Date(),
+      },
+    })
+
+    if (emailResult.success) {
+      if (movimientoId) {
+        await prisma.movimientoRepuesto.update({
+          where: { id: movimientoId },
+          data: { notificacionEnviada: true },
+        })
+      }
+      revalidatePath('/colaboradores')
+      return { success: true }
+    }
+
+    return { error: 'Error al enviar el correo' }
+  } catch (error) {
+    console.error('Error enviando notificación:', error)
+    return { error: 'Error al enviar la notificación' }
   }
 }

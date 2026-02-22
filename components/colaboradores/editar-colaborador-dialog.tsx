@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { updateColaborador } from '@/app/colaboradores/actions'
+import { AsignarInventarioSection } from './asignar-inventario-section'
 
 // ============================================================================
 // CLIENT COMPONENT - Editar Colaborador Dialog (Progressive Enhancement)
@@ -209,6 +210,12 @@ export function EditarColaboradorDialog({ open, onOpenChange, colaborador }: Edi
               ))}
             </div>
           </div>
+
+          {/* Asignar Inventario */}
+          <AsignarInventarioSection
+            colaboradorId={colaborador.id}
+            colaboradorNombre={`${colaborador.nombre} ${colaborador.apellido}`}
+          />
 
           {/* Observaciones */}
           <div className="space-y-2">

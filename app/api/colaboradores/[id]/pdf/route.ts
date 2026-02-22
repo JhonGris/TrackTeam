@@ -204,27 +204,20 @@ export async function GET(
     const hasAnyDotacion = dotacionEntries.some(([key]) => dotacion[key] === true)
 
     if (hasAnyDotacion) {
-      drawSectionTitle('Dotación Entregada')
+      // Only show items that are checked (entregados)
+      const entregados = dotacionEntries.filter(([key]) => dotacion[key] === true)
+      drawSectionTitle(`Dotación Entregada (${entregados.length})`)
 
       doc.setFontSize(10)
       doc.setTextColor(0, 0, 0)
 
       let col = 0
-      for (const [key, label] of dotacionEntries) {
-        const entregado = dotacion[key] === true
+      for (const [, label] of entregados) {
         const x = 14 + col * 55
 
-        if (entregado) {
-          // Green check
-          doc.setTextColor(22, 163, 74)
-          doc.setFont('helvetica', 'bold')
-          doc.text('✓', x, yPos)
-        } else {
-          // Red X
-          doc.setTextColor(220, 38, 38)
-          doc.setFont('helvetica', 'normal')
-          doc.text('✗', x, yPos)
-        }
+        doc.setTextColor(22, 163, 74)
+        doc.setFont('helvetica', 'bold')
+        doc.text('✓', x, yPos)
 
         doc.setTextColor(0, 0, 0)
         doc.setFont('helvetica', 'normal')
