@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { sendMovimientoInventarioEmail } from '@/lib/email'
@@ -163,9 +162,9 @@ export async function createColaborador(
     }
   }
 
-  // Revalidate and redirect
+  // Revalidate the page data (no redirect — let the dialog close via state)
   revalidatePath('/colaboradores')
-  redirect('/colaboradores')
+  return { success: true, message: 'Colaborador creado correctamente' }
 }
 
 /**
@@ -278,9 +277,9 @@ export async function updateColaborador(
     }
   }
 
-  // Revalidate and redirect
+  // Revalidate the page data (no redirect — let the dialog close via state)
   revalidatePath('/colaboradores')
-  redirect('/colaboradores')
+  return { success: true, message: 'Colaborador actualizado correctamente' }
 }
 
 /**
