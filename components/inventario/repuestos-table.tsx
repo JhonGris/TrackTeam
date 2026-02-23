@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { MoreHorizontal, Pencil, Trash2, Package, History, ArrowLeftRight, User, ZoomIn } from 'lucide-react'
-import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -76,11 +75,10 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
                     className="relative cursor-pointer group"
                     onClick={() => setFotoPreview({ url: repuesto.fotoUrl!, alt: repuesto.nombre })}
                   >
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={repuesto.fotoUrl}
                       alt={repuesto.nombre}
-                      width={80}
-                      height={80}
                       className="w-20 h-20 object-cover rounded-none border group-hover:opacity-80 transition-opacity"
                     />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -221,13 +219,12 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
       <Dialog open={!!fotoPreview} onOpenChange={(open) => !open && setFotoPreview(null)}>
         <DialogContent className="sm:max-w-[700px] p-2">
           {fotoPreview && (
-            <div className="relative w-full aspect-square max-h-[75vh]">
-              <Image
+            <div className="flex items-center justify-center max-h-[75vh]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={fotoPreview.url}
                 alt={fotoPreview.alt}
-                fill
-                className="object-contain rounded"
-                sizes="700px"
+                className="max-h-[75vh] max-w-full object-contain rounded"
               />
             </div>
           )}

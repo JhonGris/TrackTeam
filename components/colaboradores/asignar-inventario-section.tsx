@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { Package, Plus, X, Mail, Loader2, MailCheck, ZoomIn } from 'lucide-react'
-import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -191,11 +190,10 @@ export function AsignarInventarioSection({
                         className="relative cursor-pointer group"
                         onClick={() => setFotoPreview({ url: item.fotoUrl!, alt: item.nombre })}
                       >
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={item.fotoUrl}
                           alt={item.nombre}
-                          width={36}
-                          height={36}
                           className="w-9 h-9 object-cover rounded border group-hover:opacity-80 transition-opacity"
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -305,11 +303,10 @@ export function AsignarInventarioSection({
                         className="flex items-center gap-2"
                       >
                         {item.fotoUrl ? (
-                          <Image
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
                             src={item.fotoUrl}
                             alt={item.nombre}
-                            width={24}
-                            height={24}
                             className="w-6 h-6 rounded object-cover flex-shrink-0"
                           />
                         ) : (
@@ -346,13 +343,12 @@ export function AsignarInventarioSection({
       <Dialog open={!!fotoPreview} onOpenChange={(open) => !open && setFotoPreview(null)}>
         <DialogContent className="sm:max-w-[500px] p-2">
           {fotoPreview && (
-            <div className="relative w-full aspect-square max-h-[60vh]">
-              <Image
+            <div className="flex items-center justify-center max-h-[60vh]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={fotoPreview.url}
                 alt={fotoPreview.alt}
-                fill
-                className="object-contain rounded"
-                sizes="500px"
+                className="max-h-[60vh] max-w-full object-contain rounded"
               />
             </div>
           )}
