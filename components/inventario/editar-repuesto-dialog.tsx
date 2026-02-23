@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { compressImage } from '@/lib/compress-image'
+import { ColaboradorCombobox } from '@/components/shared/colaborador-combobox'
 import { updateRepuesto, getAsignadoActual } from '@/app/inventario/actions'
 import { asignarRepuestoAColaborador, desasignarRepuestoDeColaborador } from '@/app/colaboradores/actions'
 import type { RepuestoConCategoria, CategoriaRepuesto } from '@/types/repuestos'
@@ -368,23 +369,16 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
                     <User className="h-4 w-4" />
                     Asignado a
                   </Label>
-                  <Select 
-                    value={selectedAssigneeId || 'none'} 
-                    onValueChange={(val) => setSelectedAssigneeId(val === 'none' ? null : val)}
-                    disabled={loadingAssignee}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={loadingAssignee ? "Cargando..." : "Sin asignar"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {colaboradores.map((col) => (
-                        <SelectItem key={col.id} value={col.id}>
-                          {col.nombre} {col.apellido} — {col.cargo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-1">
+                    <ColaboradorCombobox
+                      colaboradores={colaboradores}
+                      value={selectedAssigneeId}
+                      onValueChange={(val) => setSelectedAssigneeId(val)}
+                      placeholder="Buscar colaborador..."
+                      noneLabel="Sin asignar"
+                      disabled={loadingAssignee}
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     La asignación se reflejará en la tarjeta del colaborador y su hoja de vida
                   </p>

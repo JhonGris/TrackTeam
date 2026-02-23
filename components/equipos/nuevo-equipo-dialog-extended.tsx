@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Monitor, Settings, MapPin, Plus, X } from 'lucide-react'
+import { ColaboradorCombobox } from '@/components/shared/colaborador-combobox'
 
 // ============================================================================
 // TYPES
@@ -254,7 +255,7 @@ export function NuevoEquipoDialog({ open, onOpenChange }: NuevoEquipoDialogProps
           <input type="hidden" name="almacenamientoTipo" value={almacenamientoTipoValue} />
           <input type="hidden" name="almacenamientoGb" value={almacenamientoGbTotal || 256} />
           <input type="hidden" name="gpu" value={gpuString} />
-          <input type="hidden" name="colaboradorId" value={selectedColaboradorId === 'sin-asignar' ? '' : selectedColaboradorId} />
+          <input type="hidden" name="colaboradorId" value={selectedColaboradorId === 'sin-asignar' || !selectedColaboradorId ? '' : selectedColaboradorId} />
           <input type="hidden" name="ramDetalle" value={ramDetalleJson} />
           <input type="hidden" name="discosDetalle" value={discosDetalleJson} />
           <input type="hidden" name="gpuDetalle" value={gpuDetalleJson} />
@@ -624,24 +625,14 @@ export function NuevoEquipoDialog({ open, onOpenChange }: NuevoEquipoDialogProps
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="colaboradorId">Colaborador Asignado</Label>
-                <Select 
-                  value={selectedColaboradorId} 
-                  onValueChange={setSelectedColaboradorId}
-                >
-                  <SelectTrigger id="colaboradorId" className="w-full">
-                    <SelectValue placeholder={loadingColaboradores ? "Cargando..." : "Seleccionar colaborador"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sin-asignar">Sin asignar</SelectItem>
-                    {colaboradores
-                      .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                      .map((col) => (
-                        <SelectItem key={col.id} value={col.id}>
-                          {col.nombre} {col.apellido} - {col.cargo}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <ColaboradorCombobox
+                  colaboradores={colaboradores}
+                  value={selectedColaboradorId === 'sin-asignar' ? null : selectedColaboradorId}
+                  onValueChange={(val) => setSelectedColaboradorId(val || 'sin-asignar')}
+                  placeholder="Buscar colaborador..."
+                  noneLabel="Sin asignar"
+                  disabled={loadingColaboradores}
+                />
               </div>
             </div>
           </div>

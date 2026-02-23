@@ -14,14 +14,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ColaboradorCombobox } from '@/components/shared/colaborador-combobox'
 import { compressImage } from '@/lib/compress-image'
 import { registrarMovimiento, getUltimoMovimiento } from '@/app/inventario/actions'
 import type { RepuestoConCategoria } from '@/types/repuestos'
@@ -202,24 +196,15 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
                 <User className="h-4 w-4" />
                 Asignar a Colaborador (opcional)
               </Label>
-              <Select value={colaboradorId || 'none'} onValueChange={(val) => setColaboradorId(val === 'none' ? '' : val)}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Seleccionar colaborador..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {colaboradores.map((col) => (
-                    <SelectItem key={col.id} value={col.id}>
-                      <span className="flex items-center gap-2">
-                        {col.nombre} {col.apellido}
-                        <span className="text-muted-foreground text-xs">
-                          ({col.cargo})
-                        </span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-2">
+                <ColaboradorCombobox
+                  colaboradores={colaboradores}
+                  value={colaboradorId || null}
+                  onValueChange={(val) => setColaboradorId(val || '')}
+                  placeholder="Buscar colaborador..."
+                  noneLabel="Sin asignar"
+                />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Si se asigna, quedará registrado quién recibe o devuelve el objeto
               </p>
