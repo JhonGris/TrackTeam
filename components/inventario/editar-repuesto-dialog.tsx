@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Package, User, Upload, X, Image as ImageIcon } from 'lucide-react'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -200,12 +199,10 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
               <div className="flex items-start gap-4">
                 {fotoPreview ? (
                   <div className="relative">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={fotoPreview}
                       alt="Vista previa"
-                      width={120}
-                      height={120}
-                      unoptimized={fotoPreview.startsWith('blob:')}
                       className="w-[120px] h-[120px] object-cover rounded-lg border"
                     />
                     <Button

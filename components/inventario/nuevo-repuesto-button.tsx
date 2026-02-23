@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import { Plus, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -127,12 +126,10 @@ export function NuevoRepuestoButton({ categorias }: Props) {
               <div className="flex items-start gap-4">
                 {fotoPreview ? (
                   <div className="relative">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={fotoPreview}
                       alt="Vista previa"
-                      width={120}
-                      height={120}
-                      unoptimized
                       className="w-[120px] h-[120px] object-cover rounded-lg border"
                     />
                     <Button

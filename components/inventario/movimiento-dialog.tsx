@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
-import { ArrowUp, ArrowDown, ArrowLeftRight, User, Mail, Camera, X, ImageIcon } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowLeftRight, User, Mail, Camera, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -288,13 +287,12 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
               
               {fotoPreview ? (
                 <div className="relative w-full">
-                  <div className="relative aspect-video w-full max-w-[300px] mx-auto rounded-lg overflow-hidden border bg-muted">
-                    <Image
+                  <div className="relative aspect-video w-full max-w-[300px] mx-auto rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={fotoPreview}
                       alt="Vista previa"
-                      fill
-                      unoptimized
-                      className="object-contain"
+                      className="max-h-full max-w-full object-contain"
                     />
                   </div>
                   <Button
