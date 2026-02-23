@@ -321,9 +321,11 @@ export async function updateRepuesto(id: string, formData: FormData) {
   const proveedor = formData.get('proveedor') as string | null
   const codigoInterno = formData.get('codigoInterno') as string | null
   const activo = formData.get('activo') === 'true'
+  const foto = formData.get('foto') as File | null
+  const eliminarFoto = formData.get('eliminarFoto') === 'true'
 
   if (!nombre || nombre.trim() === '') {
-    return { error: 'El nombre del repuesto es requerido' }
+    return { error: 'El nombre del objeto es requerido' }
   }
 
   try {
@@ -336,7 +338,26 @@ export async function updateRepuesto(id: string, formData: FormData) {
         }
       })
       if (existing) {
-        return { error: 'Ya existe otro repuesto con ese código interno' }
+        return { error: 'Ya existe otro objeto con ese código interno' }
+      }
+    }
+
+    // Handle photo upload or removal
+    let fotoUrl: string | null | undefined = undefined // undefined = no change
+    if (eliminarFoto) {
+      fotoUrl = null
+    } else if (foto && foto.size > 0) {
+      if (!foto.type.startsWith('image/')) {
+        return { error: 'Solo se permiten archivos de imagen' }
+      }
+      if (foto.size > 10 * 1024 * 1024) {
+        return { error: 'La imagen no debe superar 10MB' }
+      }
+      try {
+        fotoUrl = await uploadFileToBlob(foto, 'repuesto', id)
+      } catch (uploadError) {
+        console.error('Error uploading photo:', uploadError)
+        return { error: 'Error al subir la imagen' }
       }
     }
 
@@ -351,15 +372,17 @@ export async function updateRepuesto(id: string, formData: FormData) {
         ubicacion: ubicacion?.trim() || null,
         proveedor: proveedor?.trim() || null,
         codigoInterno: codigoInterno?.trim() || null,
-        activo
+        activo,
+        ...(fotoUrl !== undefined ? { fotoUrl } : {}),
       }
     })
 
     revalidatePath('/inventario')
+    revalidatePath('/colaboradores')
     return { success: true }
   } catch (error) {
     console.error('Error updating repuesto:', error)
-    return { error: 'Error al actualizar el repuesto' }
+    return { error: 'Error al actualizar el objeto' }
   }
 }
 

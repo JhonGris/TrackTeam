@@ -1,11 +1,16 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { Package, Plus, X, Mail, Loader2, MailCheck } from 'lucide-react'
+import { Package, Plus, X, Mail, Loader2, MailCheck, ZoomIn } from 'lucide-react'
+import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
 import {
   Command,
   CommandEmpty,
@@ -72,6 +77,7 @@ export function AsignarInventarioSection({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [emailSending, setEmailSending] = useState<string | null>(null) // repuestoId being emailed
+  const [fotoPreview, setFotoPreview] = useState<{ url: string; alt: string } | null>(null)
 
   // Load data on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,6 +184,30 @@ export function AsignarInventarioSection({
                   key={item.repuestoId}
                   className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-sm bg-blue-50/50 dark:bg-blue-950/20"
                 >
+                  {/* Thumbnail */}
+                  <div className="flex-shrink-0">
+                    {item.fotoUrl ? (
+                      <div 
+                        className="relative cursor-pointer group"
+                        onClick={() => setFotoPreview({ url: item.fotoUrl!, alt: item.nombre })}
+                      >
+                        <Image
+                          src={item.fotoUrl}
+                          alt={item.nombre}
+                          width={36}
+                          height={36}
+                          className="w-9 h-9 object-cover rounded border group-hover:opacity-80 transition-opacity"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="h-3 w-3 text-white drop-shadow-lg" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 bg-muted rounded border flex items-center justify-center">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium truncate">{item.nombre}</span>
@@ -274,7 +304,17 @@ export function AsignarInventarioSection({
                         onSelect={() => handleAssign(item.id)}
                         className="flex items-center gap-2"
                       >
-                        <Package className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                        {item.fotoUrl ? (
+                          <Image
+                            src={item.fotoUrl}
+                            alt={item.nombre}
+                            width={24}
+                            height={24}
+                            className="w-6 h-6 rounded object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <Package className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <span className="font-medium">{item.nombre}</span>
                           {item.codigoInterno && (
@@ -301,6 +341,23 @@ export function AsignarInventarioSection({
           </Popover>
         </>
       )}
+
+      {/* Photo preview lightbox */}
+      <Dialog open={!!fotoPreview} onOpenChange={(open) => !open && setFotoPreview(null)}>
+        <DialogContent className="sm:max-w-[500px] p-2">
+          {fotoPreview && (
+            <div className="relative w-full aspect-square max-h-[60vh]">
+              <Image
+                src={fotoPreview.url}
+                alt={fotoPreview.alt}
+                fill
+                className="object-contain rounded"
+                sizes="500px"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

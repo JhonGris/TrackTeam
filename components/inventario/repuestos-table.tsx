@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreHorizontal, Pencil, Trash2, Package, History, ArrowLeftRight, User } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Package, History, ArrowLeftRight, User, ZoomIn } from 'lucide-react'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,10 @@ import { EditarRepuestoDialog } from './editar-repuesto-dialog'
 import { ConfirmarEliminarDialog } from './confirmar-eliminar-dialog'
 import { HistorialMovimientosDialog } from './historial-movimientos-dialog'
 import { MovimientoDialog } from './movimiento-dialog'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
 import type { RepuestoConCategoria, CategoriaRepuesto } from '@/types/repuestos'
 import type { Colaborador } from '@/types/models'
 
@@ -31,6 +35,7 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
   const [eliminando, setEliminando] = useState<RepuestoConCategoria | null>(null)
   const [historial, setHistorial] = useState<RepuestoConCategoria | null>(null)
   const [movimiento, setMovimiento] = useState<RepuestoConCategoria | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<{ url: string; alt: string } | null>(null)
 
   // Formatear número con ceros a la izquierda (000, 001, 002...)
   const formatNumero = (num: number) => {
@@ -67,13 +72,21 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
               {/* Foto */}
               <div className="flex-shrink-0">
                 {repuesto.fotoUrl ? (
-                  <Image
-                    src={repuesto.fotoUrl}
-                    alt={repuesto.nombre}
-                    width={80}
-                    height={80}
-                    className="w-20 h-20 object-cover rounded-none border"
-                  />
+                  <div 
+                    className="relative cursor-pointer group"
+                    onClick={() => setFotoPreview({ url: repuesto.fotoUrl!, alt: repuesto.nombre })}
+                  >
+                    <Image
+                      src={repuesto.fotoUrl}
+                      alt={repuesto.nombre}
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 object-cover rounded-none border group-hover:opacity-80 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-20 h-20 bg-muted rounded-none border flex items-center justify-center">
                     <Package className="h-8 w-8 text-muted-foreground" />
@@ -203,6 +216,23 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
           onOpenChange={(open: boolean) => !open && setMovimiento(null)}
         />
       )}
+
+      {/* Photo preview lightbox */}
+      <Dialog open={!!fotoPreview} onOpenChange={(open) => !open && setFotoPreview(null)}>
+        <DialogContent className="sm:max-w-[700px] p-2">
+          {fotoPreview && (
+            <div className="relative w-full aspect-square max-h-[75vh]">
+              <Image
+                src={fotoPreview.url}
+                alt={fotoPreview.alt}
+                fill
+                className="object-contain rounded"
+                sizes="700px"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

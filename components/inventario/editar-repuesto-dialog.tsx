@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Package, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Package, User, Upload, X, Image as ImageIcon } from 'lucide-react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -52,11 +53,50 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null)
   const [loadingAssignee, setLoadingAssignee] = useState(false)
 
+  // Photo management
+  const [fotoPreview, setFotoPreview] = useState<string | null>(repuesto.fotoUrl)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [eliminarFoto, setEliminarFoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Solo se permiten archivos de imagen')
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setError('La imagen no debe superar 10MB')
+        return
+      }
+      setFotoFile(file)
+      setFotoPreview(URL.createObjectURL(file))
+      setEliminarFoto(false)
+      setError(null)
+    }
+  }
+
+  function removeFoto() {
+    if (fotoPreview && fotoFile) {
+      URL.revokeObjectURL(fotoPreview)
+    }
+    setFotoFile(null)
+    setFotoPreview(null)
+    setEliminarFoto(true)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   // Load current assignee when dialog opens
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
       setLoadingAssignee(true)
+      setFotoPreview(repuesto.fotoUrl)
+      setFotoFile(null)
+      setEliminarFoto(false)
       getAsignadoActual(repuesto.id).then(result => {
         const id = result?.colaboradorId || null
         setCurrentAssigneeId(id)
@@ -71,6 +111,14 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
+
+    // Add photo data to formData
+    if (fotoFile) {
+      formData.set('foto', fotoFile)
+    }
+    if (eliminarFoto) {
+      formData.set('eliminarFoto', 'true')
+    }
 
     const result = await updateRepuesto(repuesto.id, formData)
 
@@ -125,6 +173,64 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
 
         <form action={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* Fotografía del objeto */}
+            <div className="border-b pb-4">
+              <Label className="mb-3 block">Fotografía del Objeto</Label>
+              <div className="flex items-start gap-4">
+                {fotoPreview ? (
+                  <div className="relative">
+                    <Image
+                      src={fotoPreview}
+                      alt="Vista previa"
+                      width={120}
+                      height={120}
+                      className="w-[120px] h-[120px] object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={removeFoto}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="w-[120px] h-[120px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-1" />
+                    <span className="text-xs text-muted-foreground text-center px-2">
+                      Click para agregar
+                    </span>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFotoChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {fotoPreview ? 'Cambiar Foto' : 'Subir Foto'}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Formatos: JPG, PNG, GIF, WebP. Máximo 10MB.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Información básica */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
