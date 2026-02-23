@@ -787,3 +787,42 @@ export async function registrarUsoEnServicio(
     return { error: 'Error al registrar el uso del repuesto' }
   }
 }
+
+/**
+ * One-time fix: sync asignadoA for items that are assigned (cantidad=0)
+ * but have asignadoA=null (assigned before the field was auto-managed).
+ */
+export async function syncAsignadoA() {
+  try {
+    // Find all repuestos with cantidad=0 but no asignadoA
+    const broken = await prisma.repuesto.findMany({
+      where: { cantidad: 0, asignadoA: null, activo: true },
+    })
+
+    let fixed = 0
+    for (const rep of broken) {
+      // Find last salida movement with a colaborador
+      const lastSalida = await prisma.movimientoRepuesto.findFirst({
+        where: { repuestoId: rep.id, tipo: 'salida', colaboradorId: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        include: { colaborador: true },
+      })
+
+      if (lastSalida?.colaborador) {
+        await prisma.repuesto.update({
+          where: { id: rep.id },
+          data: {
+            asignadoA: `${lastSalida.colaborador.nombre} ${lastSalida.colaborador.apellido}`,
+          },
+        })
+        fixed++
+      }
+    }
+
+    revalidatePath('/inventario')
+    return { success: true, fixed, total: broken.length }
+  } catch (error) {
+    console.error('Error syncing asignadoA:', error)
+    return { error: 'Error al sincronizar asignaciones' }
+  }
+}

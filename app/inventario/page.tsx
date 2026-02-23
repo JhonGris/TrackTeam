@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { Package, Tags } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getInventarioStats, getRepuestos, getCategorias } from './actions'
+import { getInventarioStats, getRepuestos, getCategorias, syncAsignadoA } from './actions'
 import { getColaboradores } from '@/app/colaboradores/actions'
 import { RepuestosTable } from '@/components/inventario/repuestos-table'
 import { CategoriasSection } from '@/components/inventario/categorias-section'
@@ -28,6 +28,9 @@ export default async function InventarioPage({
 }) {
   const params = await searchParams
   const currentTab = params.tab || 'repuestos'
+
+  // One-time fix: sync asignadoA for items assigned before field was auto-managed
+  await syncAsignadoA()
   
   const [stats, repuestos, categorias, colaboradores] = await Promise.all([
     getInventarioStats(),
