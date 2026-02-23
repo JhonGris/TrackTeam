@@ -132,6 +132,7 @@ export function NuevoRepuestoButton({ categorias }: Props) {
                       alt="Vista previa"
                       width={120}
                       height={120}
+                      unoptimized
                       className="w-[120px] h-[120px] object-cover rounded-lg border"
                     />
                     <Button

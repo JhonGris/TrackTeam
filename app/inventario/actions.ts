@@ -511,11 +511,21 @@ export async function registrarMovimiento(formData: FormData) {
         return { error: 'Tipo de movimiento inválido' }
     }
 
+    // Determine asignadoA based on movement type
+    const asignadoAUpdate = tipo === 'salida' && colaborador
+      ? `${colaborador.nombre} ${colaborador.apellido}`
+      : tipo === 'entrada'
+        ? null
+        : undefined
+
     // Actualizar stock y registrar movimiento en transacción
     const [, movimiento] = await prisma.$transaction([
       prisma.repuesto.update({
         where: { id: repuestoId },
-        data: { cantidad: nuevaCantidad }
+        data: {
+          cantidad: nuevaCantidad,
+          ...(asignadoAUpdate !== undefined && { asignadoA: asignadoAUpdate }),
+        }
       }),
       prisma.movimientoRepuesto.create({
         data: {

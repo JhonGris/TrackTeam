@@ -293,6 +293,7 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
                       src={fotoPreview}
                       alt="Vista previa"
                       fill
+                      unoptimized
                       className="object-contain"
                     />
                   </div>

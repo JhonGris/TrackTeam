@@ -205,6 +205,7 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
                       alt="Vista previa"
                       width={120}
                       height={120}
+                      unoptimized={fotoPreview.startsWith('blob:')}
                       className="w-[120px] h-[120px] object-cover rounded-lg border"
                     />
                     <Button
