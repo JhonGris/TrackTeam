@@ -1,4 +1,4 @@
-import { ExpandableEquipoCard } from './expandable-equipo-card'
+import { EquipoMiniCard } from './equipo-mini-card'
 import { EquipoListRow } from './equipo-list-row'
 import { PackageOpen } from 'lucide-react'
 import type { EquipoWithRelations } from '@/types/equipos'
@@ -43,7 +43,7 @@ export function EquiposList({ equipos, view = 'grid' }: EquiposListProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {equipos.map((equipo) => (
-        <ExpandableEquipoCard key={equipo.id} equipo={equipo} />
+        <EquipoMiniCard key={equipo.id} equipo={equipo} />
       ))}
     </div>
   )

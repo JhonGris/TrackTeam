@@ -5,13 +5,12 @@ import { getInventarioStats, getRepuestos, getCategorias, syncAsignadoA } from '
 import { getColaboradores } from '@/app/colaboradores/actions'
 import { RepuestosTable } from '@/components/inventario/repuestos-table'
 import { CategoriasSection } from '@/components/inventario/categorias-section'
-import { NuevoRepuestoButton } from '@/components/inventario/nuevo-repuesto-button'
 import { NuevaCategoriaButton } from '@/components/inventario/nueva-categoria-button'
 import { ExportarRepuestosButton } from '@/components/inventario/exportar-repuestos-button'
 import { InventarioFilters } from '@/components/inventario/inventario-filters'
 
 // ============================================================================
-// SERVER COMPONENT - Página de Inventario (Next.js 16)
+// SERVER COMPONENT - Página de Inventario (Streaming Architecture)
 // ============================================================================
 
 type SearchParams = Promise<{ 
@@ -21,46 +20,33 @@ type SearchParams = Promise<{
   tab?: string
 }>
 
-export default async function InventarioPage({
-  searchParams,
+/**
+ * Async component that fetches data and renders content.
+ * Wrapped in Suspense by the parent — enables streaming.
+ */
+async function InventarioContent({
+  search,
+  categoriaId,
+  stockBajo,
+  currentTab,
 }: {
-  searchParams: SearchParams
+  search?: string
+  categoriaId?: string
+  stockBajo: boolean
+  currentTab: string
 }) {
-  const params = await searchParams
-  const currentTab = params.tab || 'repuestos'
-
   // One-time fix: sync asignadoA for items assigned before field was auto-managed
   await syncAsignadoA()
-  
+
   const [stats, repuestos, categorias, colaboradores] = await Promise.all([
     getInventarioStats(),
-    getRepuestos({
-      search: params.search,
-      categoriaId: params.categoria,
-      stockBajo: params.stockBajo === 'true',
-      activo: true
-    }),
+    getRepuestos({ search, categoriaId, stockBajo, activo: true }),
     getCategorias(),
     getColaboradores()
   ])
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventario de Objetos/Dispositivos</h1>
-          <p className="text-muted-foreground">
-            Gestiona el inventario de objetos y dispositivos
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <ExportarRepuestosButton repuestos={repuestos} />
-          <NuevaCategoriaButton />
-          <NuevoRepuestoButton categorias={categorias} />
-        </div>
-      </div>
-
+    <>
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-card border rounded-none p-4 text-center">
@@ -98,17 +84,67 @@ export default async function InventarioPage({
                 {repuestos.length} objeto(s) encontrado(s)
               </p>
             </div>
+            <ExportarRepuestosButton repuestos={repuestos} />
           </div>
           <InventarioFilters categorias={categorias} />
-          <Suspense fallback={<div className="py-8 text-center">Cargando...</div>}>
-            <RepuestosTable repuestos={repuestos} categorias={categorias} colaboradores={colaboradores} />
-          </Suspense>
+          <RepuestosTable repuestos={repuestos} categorias={categorias} colaboradores={colaboradores} />
         </TabsContent>
 
         <TabsContent value="categorias" className="space-y-4">
           <CategoriasSection categorias={categorias} />
         </TabsContent>
       </Tabs>
+    </>
+  )
+}
+
+export default async function InventarioPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const params = await searchParams
+  const currentTab = params.tab || 'repuestos'
+
+  return (
+    <div className="space-y-6">
+      {/* Header - renders immediately */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventario de Objetos/Dispositivos</h1>
+          <p className="text-muted-foreground">
+            Gestiona el inventario de objetos y dispositivos
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <NuevaCategoriaButton />
+        </div>
+      </div>
+
+      {/* Data-dependent content - streams in via Suspense */}
+      <Suspense
+        key={`${params.search}-${params.categoria}-${params.stockBajo}-${currentTab}`}
+        fallback={
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-card border rounded-none p-4 text-center">
+                  <div className="h-8 w-16 mx-auto animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-20 mx-auto mt-2 animate-pulse rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+            <div className="py-8 text-center text-muted-foreground">Cargando inventario...</div>
+          </div>
+        }
+      >
+        <InventarioContent
+          search={params.search}
+          categoriaId={params.categoria}
+          stockBajo={params.stockBajo === 'true'}
+          currentTab={currentTab}
+        />
+      </Suspense>
     </div>
   )
 }

@@ -118,18 +118,65 @@ export function formatServiciosForExport(servicios: ServicioExportData[]): Recor
   }))
 }
 
+const DOTACION_LABELS: Record<string, string> = {
+  basePortatil: 'Base Portátil',
+  audifonos: 'Audífonos',
+  apoyaPies: 'Apoya Pies',
+  escritorio: 'Escritorio',
+  sillaErgonomica: 'Silla Ergonómica',
+  camara: 'Cámara',
+  microfono: 'Micrófono',
+}
+
 /**
- * Format collaborators data for export
+ * Format collaborators data for export (all fields)
  */
 export function formatColaboradoresForExport(colaboradores: ColaboradorExportData[]): Record<string, unknown>[] {
-  return colaboradores.map((colab) => ({
-    'Nombre': colab.nombre,
-    'Apellido': colab.apellido,
-    'Cargo': colab.cargo,
-    'Email': colab.email,
-    'Ciudad': colab.ciudad || '',
-    'Equipos Asignados': colab._count?.equipos || 0,
-  }))
+  return colaboradores.map((colab) => {
+    // Parse dotacion
+    const dotacion = colab.dotacionJson ? JSON.parse(colab.dotacionJson) : {}
+    const dotacionEntregada = Object.entries(DOTACION_LABELS)
+      .filter(([key]) => dotacion[key] === true)
+      .map(([, label]) => label)
+      .join(', ')
+
+    // Format equipos
+    const equiposTexto = (colab.equipos ?? []).map(e => 
+      `${e.marca} ${e.modelo} (${e.serial}) - ${e.tipo} - ${e.estadoSalud}`
+    ).join(' | ')
+
+    // Format inventario (agrupar por repuesto)
+    const inventarioMap = new Map<string, { nombre: string; cantidad: number }>()
+    for (const mov of colab.movimientosRepuestos ?? []) {
+      const key = mov.repuesto.id
+      const existing = inventarioMap.get(key)
+      if (existing) {
+        existing.cantidad += Math.abs(mov.cantidad)
+      } else {
+        inventarioMap.set(key, { nombre: mov.repuesto.nombre, cantidad: Math.abs(mov.cantidad) })
+      }
+    }
+    const inventarioTexto = Array.from(inventarioMap.values())
+      .map(i => i.cantidad > 1 ? `${i.nombre} ×${i.cantidad}` : i.nombre)
+      .join(', ')
+
+    return {
+      'Nombre': colab.nombre,
+      'Apellido': colab.apellido,
+      'Cédula': colab.cedula || '',
+      'Cargo': colab.cargo,
+      'Email': colab.email,
+      'Dirección': colab.direccion || '',
+      'Ciudad': colab.ciudad || '',
+      'Equipos Asignados': equiposTexto || 'Ninguno',
+      'Nº Equipos': colab._count?.equipos || 0,
+      'Inventario Asignado': inventarioTexto || 'Ninguno',
+      'Dotación Entregada': dotacionEntregada || 'Ninguna',
+      'Observaciones': colab.observaciones || '',
+      'Documentos': colab._count?.archivos || 0,
+      'Eventos Historial': colab._count?.historial || 0,
+    }
+  })
 }
 
 /**
@@ -213,10 +260,33 @@ export type ColaboradorExportData = {
   apellido: string
   cargo: string
   email: string
+  cedula?: string | null
+  direccion?: string | null
   ciudad?: string | null
+  dotacionJson?: string | null
+  observaciones?: string | null
   _count?: {
     equipos: number
+    archivos: number
+    historial: number
   }
+  equipos?: Array<{
+    id: string
+    serial: string
+    marca: string
+    modelo: string
+    tipo: string
+    estadoSalud: string
+    estado: string
+  }>
+  movimientosRepuestos?: Array<{
+    id: string
+    cantidad: number
+    repuesto: {
+      id: string
+      nombre: string
+    }
+  }>
 }
 
 export type RepuestoExportData = {
