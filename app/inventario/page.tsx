@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { Package, Tags } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getInventarioStats, getRepuestos, getCategorias, syncAsignadoA } from './actions'
+import { getInventarioStats, getRepuestos, getCategorias, syncAsignadoA, migrarEntradaInicial } from './actions'
 import { getColaboradores } from '@/app/colaboradores/actions'
 import { RepuestosTable } from '@/components/inventario/repuestos-table'
 import { CategoriasSection } from '@/components/inventario/categorias-section'
@@ -37,6 +37,9 @@ async function InventarioContent({
 }) {
   // One-time fix: sync asignadoA for items assigned before field was auto-managed
   await syncAsignadoA()
+
+  // Migrar items existentes: asegurar que cada objeto tenga su movimiento de entrada inicial
+  await migrarEntradaInicial()
 
   const [stats, repuestos, categorias, colaboradores] = await Promise.all([
     getInventarioStats(),

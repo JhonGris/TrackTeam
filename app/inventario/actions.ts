@@ -275,19 +275,36 @@ export async function createRepuesto(formData: FormData) {
     })
     const siguienteNumero = (ultimoRepuesto?.numero ?? -1) + 1
 
+    // Crear repuesto con cantidad 1 (ya está en bodega/disponible)
     let repuesto = await prisma.repuesto.create({
       data: {
         numero: siguienteNumero,
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         categoriaId: categoriaId || null,
-        cantidad: 0, // Inicia en 0, se agrega mediante movimientos
+        cantidad: 1, // Inicia en 1: al crearse ya está en bodega (disponible)
         cantidadMinima,
         unidad,
         ubicacion: ubicacion?.trim() || null,
         proveedor: proveedor?.trim() || null,
         asignadoA: asignadoA?.trim() || null,
         codigoInterno: codigoInterno?.trim() || null,
+        fotoUrl: null
+      }
+    })
+
+    // Registrar movimiento automático de entrada (ingreso a bodega)
+    await prisma.movimientoRepuesto.create({
+      data: {
+        repuestoId: repuesto.id,
+        tipo: 'entrada',
+        cantidad: 1,
+        cantidadAnterior: 0,
+        cantidadNueva: 1,
+        motivo: 'Registro inicial en inventario',
+        referencia: null,
+        colaboradorId: null,
+        notificacionEnviada: false,
         fotoUrl: null
       }
     })
@@ -451,6 +468,8 @@ export async function registrarMovimiento(formData: FormData) {
     }
 
     // Validate movement alternation: no consecutive same-type movements
+    // Al crearse, cada objeto ya tiene un movimiento de entrada automático,
+    // por lo que siempre habrá al menos un movimiento.
     const lastMov = await prisma.movimientoRepuesto.findFirst({
       where: { repuestoId },
       orderBy: { createdAt: 'desc' },
@@ -459,13 +478,17 @@ export async function registrarMovimiento(formData: FormData) {
 
     if (lastMov) {
       if (tipo === 'salida' && lastMov.tipo === 'salida') {
-        return { error: 'Este objeto ya tiene una salida registrada. Debe registrar una entrada antes de una nueva salida.' }
+        return { error: 'Este objeto ya tiene una salida registrada. Debe registrar una entrada (devolución) antes de una nueva salida.' }
       }
       if (tipo === 'entrada' && lastMov.tipo === 'entrada') {
-        return { error: 'Este objeto ya tiene una entrada registrada. Debe registrar una salida antes de una nueva entrada.' }
+        return { error: 'Este objeto ya está en bodega. Solo puede registrar una salida.' }
       }
-    } else if (tipo === 'salida') {
-      return { error: 'Este objeto no tiene movimientos previos. Primero debe registrar una entrada.' }
+    } else {
+      // Caso excepcional: no debería ocurrir ya que al crear se genera movimiento de entrada.
+      // Si por alguna razón no hay movimientos, solo permitir entrada.
+      if (tipo === 'salida') {
+        return { error: 'Este objeto no tiene movimientos previos. Primero debe registrar una entrada.' }
+      }
     }
 
     // Procesar foto del movimiento si existe
@@ -824,5 +847,75 @@ export async function syncAsignadoA() {
   } catch (error) {
     console.error('Error syncing asignadoA:', error)
     return { error: 'Error al sincronizar asignaciones' }
+  }
+}
+
+// ============================================================================
+// MIGRACIÓN: Asegurar entrada inicial para items existentes
+// ============================================================================
+
+/**
+ * Items creados antes de la lógica de entrada automática necesitan un movimiento
+ * de entrada para poder registrar salidas. Esta función:
+ * 1. Busca repuestos sin ningún movimiento
+ * 2. Les crea un movimiento de "entrada" automático y pone cantidad en 1
+ * 3. Busca repuestos con cantidad=0 cuyo último movimiento NO es salida
+ *    (estaban en bodega pero con cantidad incorrecta) y los corrige
+ */
+export async function migrarEntradaInicial() {
+  try {
+    const todosRepuestos = await prisma.repuesto.findMany({
+      where: { activo: true },
+      include: {
+        movimientos: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { tipo: true }
+        }
+      }
+    })
+
+    let fixed = 0
+    for (const rep of todosRepuestos) {
+      const hasMovimientos = rep.movimientos.length > 0
+
+      if (!hasMovimientos) {
+        // Sin movimientos: crear entrada inicial y poner cantidad en 1
+        await prisma.$transaction([
+          prisma.movimientoRepuesto.create({
+            data: {
+              repuestoId: rep.id,
+              tipo: 'entrada',
+              cantidad: 1,
+              cantidadAnterior: 0,
+              cantidadNueva: 1,
+              motivo: 'Registro inicial en inventario (migración)',
+              referencia: null,
+              colaboradorId: null,
+              notificacionEnviada: false,
+              fotoUrl: null
+            }
+          }),
+          prisma.repuesto.update({
+            where: { id: rep.id },
+            data: { cantidad: 1 }
+          })
+        ])
+        fixed++
+      } else if (rep.cantidad === 0 && rep.movimientos[0].tipo !== 'salida' && !rep.asignadoA) {
+        // Tiene movimientos pero cantidad=0 sin estar asignado: corregir a 1
+        await prisma.repuesto.update({
+          where: { id: rep.id },
+          data: { cantidad: 1 }
+        })
+        fixed++
+      }
+    }
+
+    revalidatePath('/inventario')
+    return { success: true, fixed, total: todosRepuestos.length }
+  } catch (error) {
+    console.error('Error en migración de entrada inicial:', error)
+    return { error: 'Error en la migración' }
   }
 }

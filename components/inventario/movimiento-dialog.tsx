@@ -41,7 +41,6 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
   const [lastMovType, setLastMovType] = useState<string | null>(null)
   const [lastMovLoaded, setLastMovLoaded] = useState(false)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
       setLastMovLoaded(false)
@@ -49,18 +48,21 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
         const t = result?.tipo || null
         setLastMovType(t)
         setLastMovLoaded(true)
-        // Auto-select valid type
+        // Auto-select valid type:
+        // Si último fue entrada → el objeto está en bodega, ofrecer salida
+        // Si último fue salida → el objeto está asignado, ofrecer entrada (devolución)
         if (t === 'salida') setTipo('entrada')
-        else if (t === 'entrada') setTipo('salida')
-        else setTipo('entrada') // No movements: must enter first
+        else setTipo('salida') // entrada o sin movimientos → ofrecer salida
       })
     }
   }, [open, repuesto.id])
 
   const isMovTypeDisabled = (t: TipoMovimiento): boolean => {
     if (!lastMovLoaded) return false
-    if (lastMovType === null && t === 'salida') return true // No movements: only entrada
-    if (lastMovType === t) return true // Can't repeat same type
+    // Si último movimiento fue del mismo tipo, no se puede repetir
+    // entrada → solo salida disponible | salida → solo entrada disponible
+    if (lastMovType === null && t === 'salida') return true // Sin movimientos: solo entrada (caso excepcional)
+    if (lastMovType === t) return true // No puede repetir mismo tipo
     return false
   }
   
