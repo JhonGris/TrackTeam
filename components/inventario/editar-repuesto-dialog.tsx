@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Package } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Package, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,8 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { updateRepuesto } from '@/app/inventario/actions'
+import { updateRepuesto, getAsignadoActual } from '@/app/inventario/actions'
+import { asignarRepuestoAColaborador, desasignarRepuestoDeColaborador } from '@/app/colaboradores/actions'
 import type { RepuestoConCategoria, CategoriaRepuesto } from '@/types/repuestos'
+import type { Colaborador } from '@/types/models'
 
 const UNIDADES = [
   { value: 'unidad', label: 'Unidad' },
@@ -38,13 +40,33 @@ const UNIDADES = [
 type Props = {
   repuesto: RepuestoConCategoria
   categorias: CategoriaRepuesto[]
+  colaboradores: Colaborador[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function EditarRepuestoDialog({ repuesto, categorias, open, onOpenChange }: Props) {
+export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentAssigneeId, setCurrentAssigneeId] = useState<string | null>(null)
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null)
+  const [loadingAssignee, setLoadingAssignee] = useState(false)
+
+  // Load current assignee when dialog opens
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (open) {
+      setLoadingAssignee(true)
+      getAsignadoActual(repuesto.id).then(result => {
+        const id = result?.colaboradorId || null
+        setCurrentAssigneeId(id)
+        setSelectedAssigneeId(id)
+        setLoadingAssignee(false)
+      }).catch(() => {
+        setLoadingAssignee(false)
+      })
+    }
+  }, [open, repuesto.id])
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
@@ -54,6 +76,32 @@ export function EditarRepuestoDialog({ repuesto, categorias, open, onOpenChange 
 
     if (result.error) {
       setError(result.error)
+      setLoading(false)
+      return
+    }
+
+    // Handle assignment change
+    try {
+      if (currentAssigneeId !== selectedAssigneeId) {
+        if (currentAssigneeId) {
+          const unassignResult = await desasignarRepuestoDeColaborador(currentAssigneeId, repuesto.id)
+          if (unassignResult.error) {
+            setError(unassignResult.error)
+            setLoading(false)
+            return
+          }
+        }
+        if (selectedAssigneeId) {
+          const assignResult = await asignarRepuestoAColaborador(selectedAssigneeId, repuesto.id)
+          if (assignResult.error) {
+            setError(assignResult.error)
+            setLoading(false)
+            return
+          }
+        }
+      }
+    } catch {
+      setError('Error al actualizar la asignación')
       setLoading(false)
       return
     }
@@ -68,10 +116,10 @@ export function EditarRepuestoDialog({ repuesto, categorias, open, onOpenChange 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Editar Repuesto
+            Editar Objeto de Inventario
           </DialogTitle>
           <DialogDescription>
-            Modifica la información del repuesto
+            Modifica la información del objeto de inventario
           </DialogDescription>
         </DialogHeader>
 
@@ -191,13 +239,30 @@ export function EditarRepuestoDialog({ repuesto, categorias, open, onOpenChange 
                 </div>
 
                 <div>
-                  <Label htmlFor="asignadoA">Asignado a</Label>
-                  <Input
-                    id="asignadoA"
-                    name="asignadoA"
-                    placeholder="Persona o área asignada"
-                    defaultValue={repuesto.asignadoA || ''}
-                  />
+                  <Label htmlFor="asignadoA" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Asignado a
+                  </Label>
+                  <Select 
+                    value={selectedAssigneeId || 'none'} 
+                    onValueChange={(val) => setSelectedAssigneeId(val === 'none' ? null : val)}
+                    disabled={loadingAssignee}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={loadingAssignee ? "Cargando..." : "Sin asignar"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {colaboradores.map((col) => (
+                        <SelectItem key={col.id} value={col.id}>
+                          {col.nombre} {col.apellido} — {col.cargo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    La asignación se reflejará en la tarjeta del colaborador y su hoja de vida
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 pt-6">
@@ -208,7 +273,7 @@ export function EditarRepuestoDialog({ repuesto, categorias, open, onOpenChange 
                     value="true"
                   />
                   <Label htmlFor="activo" className="cursor-pointer">
-                    Repuesto activo
+                    Activo en inventario
                   </Label>
                 </div>
               </div>

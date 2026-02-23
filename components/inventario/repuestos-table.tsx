@@ -37,16 +37,16 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
     return num.toString().padStart(3, '0')
   }
 
-  // Check if item is assigned (cantidad === 0 means assigned to someone)
-  const isAssigned = (repuesto: RepuestoConCategoria) => repuesto.cantidad === 0
+  // Check if item is assigned to a collaborator
+  const isAssigned = (repuesto: RepuestoConCategoria) => !!repuesto.asignadoA
 
   if (repuestos.length === 0) {
     return (
       <div className="text-center py-12">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium">No hay repuestos</h3>
+        <h3 className="text-lg font-medium">No hay objetos en el inventario</h3>
         <p className="text-muted-foreground">
-          Agrega repuestos al inventario para comenzar
+          Agrega objetos al inventario para comenzar
         </p>
       </div>
     )
@@ -173,6 +173,7 @@ export function RepuestosTable({ repuestos, categorias, colaboradores }: Props) 
         <EditarRepuestoDialog
           repuesto={editando}
           categorias={categorias}
+          colaboradores={colaboradores}
           open={!!editando}
           onOpenChange={(open: boolean) => !open && setEditando(null)}
         />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { ArrowUp, ArrowDown, ArrowLeftRight, User, Mail, Camera, X, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { registrarMovimiento } from '@/app/inventario/actions'
+import { registrarMovimiento, getUltimoMovimiento } from '@/app/inventario/actions'
 import type { RepuestoConCategoria } from '@/types/repuestos'
 import type { Colaborador } from '@/types/models'
 
@@ -42,6 +42,33 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
   const [tipo, setTipo] = useState<TipoMovimiento>('entrada')
   const [colaboradorId, setColaboradorId] = useState<string>('')
   const [enviarCorreo, setEnviarCorreo] = useState(true)
+  
+  // Movement type validation
+  const [lastMovType, setLastMovType] = useState<string | null>(null)
+  const [lastMovLoaded, setLastMovLoaded] = useState(false)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (open) {
+      setLastMovLoaded(false)
+      getUltimoMovimiento(repuesto.id).then(result => {
+        const t = result?.tipo || null
+        setLastMovType(t)
+        setLastMovLoaded(true)
+        // Auto-select valid type
+        if (t === 'salida') setTipo('entrada')
+        else if (t === 'entrada') setTipo('salida')
+        else setTipo('entrada') // No movements: must enter first
+      })
+    }
+  }, [open, repuesto.id])
+
+  const isMovTypeDisabled = (t: TipoMovimiento): boolean => {
+    if (!lastMovLoaded) return false
+    if (lastMovType === null && t === 'salida') return true // No movements: only entrada
+    if (lastMovType === t) return true // Can't repeat same type
+    return false
+  }
   
   // Estado para foto
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
@@ -117,6 +144,8 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
       fileInputRef.current.value = ''
     }
     setError(null)
+    setLastMovLoaded(false)
+    setLastMovType(null)
   }
 
   function handleOpenChange(isOpen: boolean) {
@@ -156,6 +185,7 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
                       variant={tipo === t.value ? 'default' : 'outline'}
                       className="flex flex-col items-center gap-1 h-auto py-3"
                       onClick={() => setTipo(t.value)}
+                      disabled={isMovTypeDisabled(t.value)}
                     >
                       <Icon className={`h-5 w-5 ${tipo === t.value ? '' : t.color}`} />
                       <span className="text-xs">{t.label}</span>

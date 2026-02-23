@@ -576,7 +576,7 @@ export async function asignarRepuestoAColaborador(
     await prisma.$transaction([
       prisma.repuesto.update({
         where: { id: repuestoId },
-        data: { cantidad: 0 },
+        data: { cantidad: 0, asignadoA: `${colaborador.nombre} ${colaborador.apellido}` },
       }),
       prisma.movimientoRepuesto.create({
         data: {
@@ -629,7 +629,7 @@ export async function desasignarRepuestoDeColaborador(
     await prisma.$transaction([
       prisma.repuesto.update({
         where: { id: repuestoId },
-        data: { cantidad: 1 },
+        data: { cantidad: 1, asignadoA: null },
       }),
       prisma.movimientoRepuesto.create({
         data: {

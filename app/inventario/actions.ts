@@ -319,7 +319,6 @@ export async function updateRepuesto(id: string, formData: FormData) {
   const unidad = formData.get('unidad') as string || 'unidad'
   const ubicacion = formData.get('ubicacion') as string | null
   const proveedor = formData.get('proveedor') as string | null
-  const asignadoA = formData.get('asignadoA') as string | null
   const codigoInterno = formData.get('codigoInterno') as string | null
   const activo = formData.get('activo') === 'true'
 
@@ -351,7 +350,6 @@ export async function updateRepuesto(id: string, formData: FormData) {
         unidad,
         ubicacion: ubicacion?.trim() || null,
         proveedor: proveedor?.trim() || null,
-        asignadoA: asignadoA?.trim() || null,
         codigoInterno: codigoInterno?.trim() || null,
         activo
       }
@@ -426,7 +424,25 @@ export async function registrarMovimiento(formData: FormData) {
     })
 
     if (!repuesto) {
-      return { error: 'Repuesto no encontrado' }
+      return { error: 'Objeto no encontrado' }
+    }
+
+    // Validate movement alternation: no consecutive same-type movements
+    const lastMov = await prisma.movimientoRepuesto.findFirst({
+      where: { repuestoId },
+      orderBy: { createdAt: 'desc' },
+      select: { tipo: true }
+    })
+
+    if (lastMov) {
+      if (tipo === 'salida' && lastMov.tipo === 'salida') {
+        return { error: 'Este objeto ya tiene una salida registrada. Debe registrar una entrada antes de una nueva salida.' }
+      }
+      if (tipo === 'entrada' && lastMov.tipo === 'entrada') {
+        return { error: 'Este objeto ya tiene una entrada registrada. Debe registrar una salida antes de una nueva entrada.' }
+      }
+    } else if (tipo === 'salida') {
+      return { error: 'Este objeto no tiene movimientos previos. Primero debe registrar una entrada.' }
     }
 
     // Procesar foto del movimiento si existe
@@ -603,6 +619,34 @@ export async function deleteMovimiento(id: string) {
     console.error('Error eliminando movimiento:', error)
     return { error: 'Error al eliminar el movimiento' }
   }
+}
+
+// ============================================================================
+// HELPERS PARA UI DE MOVIMIENTOS
+// ============================================================================
+
+export async function getUltimoMovimiento(repuestoId: string) {
+  return prisma.movimientoRepuesto.findFirst({
+    where: { repuestoId },
+    orderBy: { createdAt: 'desc' },
+    select: { tipo: true, colaboradorId: true }
+  })
+}
+
+export async function getAsignadoActual(repuestoId: string): Promise<{ colaboradorId: string } | null> {
+  const lastMov = await prisma.movimientoRepuesto.findFirst({
+    where: { repuestoId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      colaborador: { select: { id: true, nombre: true, apellido: true } }
+    }
+  })
+
+  if (lastMov?.tipo === 'salida' && lastMov.colaboradorId) {
+    return { colaboradorId: lastMov.colaboradorId }
+  }
+
+  return null
 }
 
 // ============================================================================
