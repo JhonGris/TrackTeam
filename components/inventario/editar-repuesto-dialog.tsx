@@ -112,10 +112,29 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
     setLoading(true)
     setError(null)
 
-    // Add photo data to formData
+    // Upload photo directly to /api/upload from client (avoids server action body size limit)
     if (fotoFile) {
-      formData.set('foto', fotoFile)
+      try {
+        const uploadForm = new FormData()
+        uploadForm.append('file', fotoFile)
+        uploadForm.append('tipoEntidad', 'repuesto')
+        uploadForm.append('entidadId', repuesto.id)
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadForm })
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json().catch(() => null)
+          setError(errData?.error || 'Error al subir la imagen')
+          setLoading(false)
+          return
+        }
+        // Photo uploaded successfully (API updates fotoUrl in DB directly for repuesto)
+      } catch {
+        setError('Error de conexión al subir la imagen')
+        setLoading(false)
+        return
+      }
     }
+
+    // If removing photo, set flag for server action
     if (eliminarFoto) {
       formData.set('eliminarFoto', 'true')
     }
