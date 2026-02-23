@@ -551,7 +551,16 @@ export async function getMovimientosRepuesto(repuestoId: string, limit = 50) {
   return prisma.movimientoRepuesto.findMany({
     where: { repuestoId },
     orderBy: { createdAt: 'desc' },
-    take: limit
+    take: limit,
+    include: {
+      colaborador: {
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+        },
+      },
+    },
   })
 }
 

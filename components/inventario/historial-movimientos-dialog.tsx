@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { History, ArrowUp, ArrowDown, RefreshCw, Trash2, Loader2 } from 'lucide-react'
+import { History, ArrowUp, ArrowDown, RefreshCw, Trash2, Loader2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,6 +32,11 @@ type Movimiento = {
   cantidadNueva: number
   motivo: string | null
   referencia: string | null
+  colaborador: {
+    id: string
+    nombre: string
+    apellido: string
+  } | null
   createdAt: Date
 }
 
@@ -163,8 +168,14 @@ export function HistorialMovimientosDialog({ repuesto, open, onOpenChange }: Pro
                     <div className="text-sm text-muted-foreground mt-1">
                       {mov.cantidadAnterior} → {mov.cantidadNueva} {repuesto.unidad}s
                     </div>
+                    {mov.colaborador && (
+                      <div className="flex items-center gap-1 text-sm mt-1">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-medium">{mov.colaborador.nombre} {mov.colaborador.apellido}</span>
+                      </div>
+                    )}
                     {mov.motivo && (
-                      <div className="text-sm mt-1">
+                      <div className="text-sm mt-1 text-muted-foreground">
                         {mov.motivo}
                       </div>
                     )}

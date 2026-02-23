@@ -73,6 +73,7 @@ export async function GET(
             nombre: true,
             tipo: true,
             tamanio: true,
+            ruta: true,
             descripcion: true,
             createdAt: true,
           },
@@ -411,12 +412,15 @@ export async function GET(
 
       checkPageBreak(20 + colaborador.archivos.length * 8)
 
+      // Store archivo URLs for link overlay
+      const archivoUrls: string[] = colaborador.archivos.map(a => a.ruta)
+
       const archivosBody = colaborador.archivos.map(a => [
-        a.nombre.length > 45 ? a.nombre.substring(0, 42) + '...' : a.nombre,
+        a.nombre.length > 40 ? a.nombre.substring(0, 37) + '...' : a.nombre,
         fileTypeLabels[a.tipo] || a.tipo.split('/').pop()?.toUpperCase() || a.tipo,
         formatFileSize(a.tamanio),
         a.descripcion
-          ? (a.descripcion.length > 40 ? a.descripcion.substring(0, 37) + '...' : a.descripcion)
+          ? (a.descripcion.length > 35 ? a.descripcion.substring(0, 32) + '...' : a.descripcion)
           : '—',
         formatDateShort(a.createdAt),
       ])
@@ -436,13 +440,22 @@ export async function GET(
           cellPadding: 3,
         },
         columnStyles: {
-          0: { cellWidth: 55 },
+          0: { cellWidth: 55, textColor: [30, 64, 175] },
           1: { cellWidth: 25 },
           2: { cellWidth: 22 },
           3: { cellWidth: 50 },
           4: { cellWidth: 28 },
         },
         margin: { left: 14, right: 14 },
+        didDrawCell: (data) => {
+          // Add clickable link on the document name column (column 0, body rows only)
+          if (data.section === 'body' && data.column.index === 0) {
+            const url = archivoUrls[data.row.index]
+            if (url) {
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url })
+            }
+          }
+        },
       })
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
