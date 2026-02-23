@@ -1,6 +1,4 @@
 import { Suspense } from 'react'
-import { Users, Package, UserCheck } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import prisma from '@/lib/prisma'
 import { ColaboradoresFilters } from '@/components/colaboradores/colaboradores-filters'
 import { ColaboradoresList } from '@/components/colaboradores/colaboradores-list'
@@ -10,7 +8,7 @@ import { ExportarColaboradoresButton } from '@/components/colaboradores/exportar
 import { ColaboradoresListSkeleton } from '@/components/colaboradores/colaboradores-list-skeleton'
 
 // ============================================================================
-// SERVER COMPONENT - Data Fetching Layer (Liskov Substitution Principle)
+// SERVER COMPONENT - Colaboradores Page (Streaming Architecture)
 // ============================================================================
 
 type SearchParams = Promise<{
@@ -128,20 +126,48 @@ function calculateStats(colaboradores: Awaited<ReturnType<typeof getColaboradore
 }
 
 /**
- * Main Page Component - Server Component by default
- * Orchestrates data fetching and rendering (Dependency Inversion)
+ * Async component that fetches data and renders content.
+ * Wrapped in Suspense by the parent — enables streaming.
  */
-export default async function ColaboradoresPage({ searchParams }: ColaboradoresPageProps) {
-  const { search, sort, view } = await searchParams
-
-  // Fetch data on the server
+async function ColaboradoresContent({
+  search,
+  sort,
+  view,
+}: {
+  search?: string
+  sort?: string
+  view?: string
+}) {
   const colaboradores = await getColaboradores(search, sort)
   const stats = calculateStats(colaboradores)
 
   return (
+    <>
+      {/* Stats Cards */}
+      <ColaboradoresStats stats={stats} />
+
+      {/* Export button (needs data) */}
+      <div className="flex justify-end -mt-2">
+        <ExportarColaboradoresButton colaboradores={colaboradores} />
+      </div>
+
+      {/* Colaboradores List */}
+      <ColaboradoresList colaboradores={colaboradores} view={view === 'list' ? 'list' : 'grid'} />
+    </>
+  )
+}
+
+/**
+ * Main Page Component - Server Component by default
+ * Shell renders immediately, data streams via Suspense (Dependency Inversion)
+ */
+export default async function ColaboradoresPage({ searchParams }: ColaboradoresPageProps) {
+  const { search, sort, view } = await searchParams
+
+  return (
     <div className="min-h-screen bg-background p-6 md:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
+        {/* Header - renders immediately */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight font-heading">
@@ -152,20 +178,16 @@ export default async function ColaboradoresPage({ searchParams }: ColaboradoresP
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <ExportarColaboradoresButton colaboradores={colaboradores} />
             <NuevoColaboradorButton />
           </div>
         </div>
 
-        {/* Stats Cards - Server Component */}
-        <ColaboradoresStats stats={stats} />
-
-        {/* Filters - Client Component for interactivity */}
+        {/* Filters - Client Component, renders immediately */}
         <ColaboradoresFilters />
 
-        {/* Colaboradores List - Server Component with Suspense */}
+        {/* Data-dependent content - streams in via Suspense */}
         <Suspense key={`${search}-${sort}-${view}`} fallback={<ColaboradoresListSkeleton />}>
-          <ColaboradoresList colaboradores={colaboradores} view={view === 'list' ? 'list' : 'grid'} />
+          <ColaboradoresContent search={search} sort={sort} view={view} />
         </Suspense>
       </div>
     </div>

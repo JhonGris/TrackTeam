@@ -9,7 +9,7 @@ import { EquiposListSkeleton } from '@/components/equipos/equipos-list-skeleton'
 import type { EquipoWithRelations } from '@/types/equipos'
 
 // ============================================================================
-// SERVER COMPONENT - Equipos Page (Next.js 16 Pattern)
+// SERVER COMPONENT - Equipos Page (Streaming Architecture)
 // ============================================================================
 
 /**
@@ -95,8 +95,46 @@ function calculateStats(equipos: Awaited<ReturnType<typeof getEquipos>>) {
 }
 
 /**
+ * Async component that fetches data and renders content.
+ * Wrapped in Suspense by the parent — enables streaming.
+ */
+async function EquiposContent({
+  search,
+  tipo,
+  estado,
+  estadoOp,
+  sort,
+  view,
+}: {
+  search?: string
+  tipo?: string
+  estado?: string
+  estadoOp?: string
+  sort?: string
+  view: 'grid' | 'list'
+}) {
+  const equipos = await getEquipos(search, tipo, estado, estadoOp, sort)
+  const stats = calculateStats(equipos)
+
+  return (
+    <>
+      {/* Stats */}
+      <EquiposStats stats={stats} />
+
+      {/* Export button (needs data) */}
+      <div className="flex justify-end -mt-2">
+        <ExportarEquiposButton equipos={equipos} />
+      </div>
+
+      {/* List */}
+      <EquiposList equipos={equipos} view={view} />
+    </>
+  )
+}
+
+/**
  * Equipos page component
- * Server Component - fetches data directly from database
+ * Server Component - shell renders immediately, data streams via Suspense
  * Follows Next.js 16 async searchParams pattern
  */
 export default async function EquiposPage({
@@ -112,12 +150,9 @@ export default async function EquiposPage({
   const sort = typeof params.sort === 'string' ? params.sort : undefined
   const view = params.view === 'list' ? 'list' : 'grid'
 
-  const equipos = await getEquipos(search, tipo, estado, estadoOp, sort)
-  const stats = calculateStats(equipos)
-
   return (
     <div className="container mx-auto space-y-6 p-6">
-      {/* Header */}
+      {/* Header - renders immediately */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Equipos</h1>
@@ -126,22 +161,16 @@ export default async function EquiposPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportarEquiposButton equipos={equipos} />
           <NuevoEquipoButton />
         </div>
       </div>
 
-      {/* Stats */}
-      <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
-        <EquiposStats stats={stats} />
-      </Suspense>
-
-      {/* Filters */}
+      {/* Filters - renders immediately */}
       <EquiposFilters />
 
-      {/* List */}
-      <Suspense fallback={<EquiposListSkeleton />}>
-        <EquiposList equipos={equipos} view={view} />
+      {/* Data-dependent content - streams in via Suspense */}
+      <Suspense key={`${search}-${tipo}-${estado}-${estadoOp}-${sort}-${view}`} fallback={<EquiposListSkeleton />}>
+        <EquiposContent search={search} tipo={tipo} estado={estado} estadoOp={estadoOp} sort={sort} view={view} />
       </Suspense>
     </div>
   )
