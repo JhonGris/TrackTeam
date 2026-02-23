@@ -33,6 +33,7 @@ import {
   Eye,
   Loader2,
 } from 'lucide-react'
+import { compressImage } from '@/lib/compress-image'
 
 // ============================================================================
 // TYPES
@@ -120,7 +121,11 @@ export function FileUploader({
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+        let file = files[i]
+        // Compress images before upload
+        if (file.type.startsWith('image/')) {
+          file = await compressImage(file)
+        }
         setUploadProgress(`Subiendo ${i + 1} de ${files.length}: ${file.name}`)
 
         const formData = new FormData()

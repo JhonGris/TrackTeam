@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { compressImage } from '@/lib/compress-image'
 import { updateRepuesto, getAsignadoActual } from '@/app/inventario/actions'
 import { asignarRepuestoAColaborador, desasignarRepuestoDeColaborador } from '@/app/colaboradores/actions'
 import type { RepuestoConCategoria, CategoriaRepuesto } from '@/types/repuestos'
@@ -59,7 +60,7 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
   const [eliminarFoto, setEliminarFoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -70,8 +71,9 @@ export function EditarRepuestoDialog({ repuesto, categorias, colaboradores, open
         setError('La imagen no debe superar 10MB')
         return
       }
-      setFotoFile(file)
-      setFotoPreview(URL.createObjectURL(file))
+      const compressed = await compressImage(file)
+      setFotoFile(compressed)
+      setFotoPreview(URL.createObjectURL(compressed))
       setEliminarFoto(false)
       setError(null)
     }

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { compressImage } from '@/lib/compress-image'
 import { registrarMovimiento, getUltimoMovimiento } from '@/app/inventario/actions'
 import type { RepuestoConCategoria } from '@/types/repuestos'
 import type { Colaborador } from '@/types/models'
@@ -84,15 +85,16 @@ export function MovimientoDialog({ repuesto, colaboradores, open, onOpenChange }
   const colaboradorSeleccionado = colaboradores.find(c => c.id === colaboradorId)
 
   // Handlers para foto
-  function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-      setFotoFile(file)
+      const compressed = await compressImage(file)
+      setFotoFile(compressed)
       const reader = new FileReader()
       reader.onloadend = () => {
         setFotoPreview(reader.result as string)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(compressed)
     }
   }
 

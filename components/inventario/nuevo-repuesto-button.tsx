@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { compressImage } from '@/lib/compress-image'
 import { createRepuesto } from '@/app/inventario/actions'
 import type { CategoriaRepuesto } from '@/types/repuestos'
 
@@ -38,7 +39,7 @@ export function NuevoRepuestoButton({ categorias }: Props) {
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
       // Validar que sea imagen
@@ -51,8 +52,9 @@ export function NuevoRepuestoButton({ categorias }: Props) {
         setError('La imagen no debe superar 10MB')
         return
       }
-      setFotoFile(file)
-      setFotoPreview(URL.createObjectURL(file))
+      const compressed = await compressImage(file)
+      setFotoFile(compressed)
+      setFotoPreview(URL.createObjectURL(compressed))
       setError(null)
     }
   }
