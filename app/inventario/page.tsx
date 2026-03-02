@@ -8,6 +8,7 @@ import { CategoriasSection } from '@/components/inventario/categorias-section'
 import { NuevaCategoriaButton } from '@/components/inventario/nueva-categoria-button'
 import { ExportarRepuestosButton } from '@/components/inventario/exportar-repuestos-button'
 import { InventarioFilters } from '@/components/inventario/inventario-filters'
+import { NuevoRepuestoButton } from '@/components/inventario/nuevo-repuesto-button'
 
 // ============================================================================
 // SERVER COMPONENT - Página de Inventario (Streaming Architecture)
@@ -87,7 +88,10 @@ async function InventarioContent({
                 {repuestos.length} objeto(s) encontrado(s)
               </p>
             </div>
-            <ExportarRepuestosButton repuestos={repuestos} />
+            <div className="flex gap-2">
+              <NuevoRepuestoButton categorias={categorias} />
+              <ExportarRepuestosButton repuestos={repuestos} />
+            </div>
           </div>
           <InventarioFilters categorias={categorias} />
           <RepuestosTable repuestos={repuestos} categorias={categorias} colaboradores={colaboradores} />
