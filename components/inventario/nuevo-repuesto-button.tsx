@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Plus, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,20 +23,38 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { compressImage } from '@/lib/compress-image'
-import { createRepuesto } from '@/app/inventario/actions'
+import { createRepuesto, getCategorias } from '@/app/inventario/actions'
 import type { CategoriaRepuesto } from '@/types/repuestos'
 
 type Props = {
-  categorias: CategoriaRepuesto[]
+  categorias?: CategoriaRepuesto[]
 }
 
-export function NuevoRepuestoButton({ categorias }: Props) {
+export function NuevoRepuestoButton({ categorias: initialCategorias }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [categorias, setCategorias] = useState<CategoriaRepuesto[]>(initialCategorias ?? [])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch categories when dialog opens (if not already loaded)
+  useEffect(() => {
+    if (open && categorias.length === 0) {
+      getCategorias().then((cats) => {
+        setCategorias(cats.map(c => ({
+          id: c.id,
+          nombre: c.nombre,
+          descripcion: c.descripcion,
+          color: c.color,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          _count: c._count,
+        })))
+      })
+    }
+  }, [open, categorias.length])
 
   async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

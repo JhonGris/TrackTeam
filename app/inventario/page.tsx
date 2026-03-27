@@ -111,7 +111,6 @@ export default async function InventarioPage({
 }) {
   const params = await searchParams
   const currentTab = params.tab || 'repuestos'
-  const categorias = await getCategorias()
 
   return (
     <div className="space-y-6">
@@ -124,7 +123,7 @@ export default async function InventarioPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <NuevoRepuestoButton categorias={categorias} />
+          <NuevoRepuestoButton />
           <NuevaCategoriaButton />
         </div>
       </div>
