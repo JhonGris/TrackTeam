@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
-import { Package, Plus, Tags } from 'lucide-react'
+import { Package, Tags } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
 import { getInventarioStats, getRepuestos, getCategorias, syncAsignadoA, migrarEntradaInicial } from './actions'
 import { getColaboradores } from '@/app/colaboradores/actions'
 import { RepuestosTable } from '@/components/inventario/repuestos-table'
@@ -105,15 +104,6 @@ async function InventarioContent({
   )
 }
 
-/**
- * Small async wrapper so the button can live outside the main Suspense.
- * It has its own Suspense fallback → the button never disappears.
- */
-async function NuevoRepuestoBtnWrapper() {
-  const categorias = await getCategorias()
-  return <NuevoRepuestoButton categorias={categorias} />
-}
-
 export default async function InventarioPage({
   searchParams,
 }: {
@@ -121,6 +111,7 @@ export default async function InventarioPage({
 }) {
   const params = await searchParams
   const currentTab = params.tab || 'repuestos'
+  const categorias = await getCategorias()
 
   return (
     <div className="space-y-6">
@@ -133,14 +124,7 @@ export default async function InventarioPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <Suspense fallback={
-            <Button disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              Objeto/Dispositivo
-            </Button>
-          }>
-            <NuevoRepuestoBtnWrapper />
-          </Suspense>
+          <NuevoRepuestoButton categorias={categorias} />
           <NuevaCategoriaButton />
         </div>
       </div>
